@@ -11,7 +11,7 @@ class Leaf extends StatefulWidget {
   const Leaf({ Key key, this.child }) : super(key: key);
   final Widget child;
   @override
-  _LeafState createState() => new _LeafState();
+  _LeafState createState() => _LeafState();
 }
 
 class _LeafState extends State<Leaf> {
@@ -23,7 +23,7 @@ class _LeafState extends State<Leaf> {
 
   @override
   Widget build(BuildContext context) {
-    return new KeepAlive(
+    return KeepAlive(
       keepAlive: _keepAlive,
       child: widget.child,
     );
@@ -31,10 +31,10 @@ class _LeafState extends State<Leaf> {
 }
 
 List<Widget> generateList(Widget child) {
-  return new List<Widget>.generate(
+  return List<Widget>.generate(
     100,
-    (int index) => new Leaf(
-      key: new GlobalObjectKey<_LeafState>(index),
+    (int index) => Leaf(
+      key: GlobalObjectKey<_LeafState>(index),
       child: child,
     ),
     growable: false,
@@ -44,12 +44,13 @@ List<Widget> generateList(Widget child) {
 void main() {
   testWidgets('KeepAlive with ListView with itemExtent', (WidgetTester tester) async {
     await tester.pumpWidget(
-      new Directionality(
+      Directionality(
         textDirection: TextDirection.ltr,
-        child: new ListView(
+        child: ListView(
           cacheExtent: 0.0,
           addAutomaticKeepAlives: false,
           addRepaintBoundaries: false,
+          addSemanticIndexes: false,
           itemExtent: 12.3, // about 50 widgets visible
           children: generateList(const Placeholder()),
         ),
@@ -91,13 +92,14 @@ void main() {
 
   testWidgets('KeepAlive with ListView without itemExtent', (WidgetTester tester) async {
     await tester.pumpWidget(
-      new Directionality(
+      Directionality(
         textDirection: TextDirection.ltr,
-        child: new ListView(
+        child: ListView(
           cacheExtent: 0.0,
           addAutomaticKeepAlives: false,
           addRepaintBoundaries: false,
-          children: generateList(new Container(height: 12.3, child: const Placeholder())), // about 50 widgets visible
+          addSemanticIndexes: false,
+          children: generateList(Container(height: 12.3, child: const Placeholder())), // about 50 widgets visible
         ),
       ),
     );
@@ -137,15 +139,16 @@ void main() {
 
   testWidgets('KeepAlive with GridView', (WidgetTester tester) async {
     await tester.pumpWidget(
-      new Directionality(
+      Directionality(
         textDirection: TextDirection.ltr,
-        child: new GridView.count(
+        child: GridView.count(
           cacheExtent: 0.0,
           addAutomaticKeepAlives: false,
           addRepaintBoundaries: false,
+          addSemanticIndexes: false,
           crossAxisCount: 2,
           childAspectRatio: 400.0 / 24.6, // about 50 widgets visible
-          children: generateList(new Container(child: const Placeholder())),
+          children: generateList(Container(child: const Placeholder())),
         ),
       ),
     );
@@ -185,11 +188,12 @@ void main() {
 
   testWidgets('KeepAlive render tree description', (WidgetTester tester) async {
     await tester.pumpWidget(
-      new Directionality(
+      Directionality(
         textDirection: TextDirection.ltr,
-        child: new ListView(
+        child: ListView(
           addAutomaticKeepAlives: false,
           addRepaintBoundaries: false,
+          addSemanticIndexes: false,
           itemExtent: 400.0, // 2 visible children
           children: generateList(const Placeholder()),
         ),
@@ -226,7 +230,7 @@ void main() {
       '       │ diagnosis: insufficient data to draw conclusion (less than five\n'
       '       │   repaints)\n'
       '       │\n'
-      '       └─child: _RenderExcludableScrollSemantics#00000\n'
+      '       └─child: _RenderScrollSemantics#00000\n'
       '         │ parentData: <none> (can use size)\n'
       '         │ constraints: BoxConstraints(w=800.0, h=600.0)\n'
       '         │ semantic boundary\n'
@@ -307,14 +311,14 @@ void main() {
       '                     │     constraints: BoxConstraints(w=800.0, h=400.0)\n'
       '                     │     size: Size(800.0, 400.0)\n'
       '                     │\n'
-      '                     └─child with index 2: RenderLimitedBox#00000\n'
+      '                     └─child with index 2: RenderLimitedBox#00000 NEEDS-PAINT\n'
       '                       │ parentData: index=2; layoutOffset=800.0\n'
       '                       │ constraints: BoxConstraints(w=800.0, h=400.0)\n'
       '                       │ size: Size(800.0, 400.0)\n'
       '                       │ maxWidth: 400.0\n'
       '                       │ maxHeight: 400.0\n'
       '                       │\n'
-      '                       └─child: RenderCustomPaint#00000\n'
+      '                       └─child: RenderCustomPaint#00000 NEEDS-PAINT\n'
       '                           parentData: <none> (can use size)\n'
       '                           constraints: BoxConstraints(w=800.0, h=400.0)\n'
       '                           size: Size(800.0, 400.0)\n'
@@ -355,7 +359,7 @@ void main() {
       '       │ diagnosis: insufficient data to draw conclusion (less than five\n'
       '       │   repaints)\n'
       '       │\n'
-      '       └─child: _RenderExcludableScrollSemantics#00000\n'
+      '       └─child: _RenderScrollSemantics#00000\n'
       '         │ parentData: <none> (can use size)\n'
       '         │ constraints: BoxConstraints(w=800.0, h=600.0)\n'
       '         │ semantic boundary\n'
@@ -412,14 +416,14 @@ void main() {
       '                     │   cacheExtent: 1100.0)\n'
       '                     │ currently live children: 4 to 7\n'
       '                     │\n'
-      '                     ├─child with index 4: RenderLimitedBox#00000\n'
+      '                     ├─child with index 4: RenderLimitedBox#00000 NEEDS-PAINT\n'
       '                     │ │ parentData: index=4; layoutOffset=1600.0\n'
       '                     │ │ constraints: BoxConstraints(w=800.0, h=400.0)\n'
       '                     │ │ size: Size(800.0, 400.0)\n'
       '                     │ │ maxWidth: 400.0\n'
       '                     │ │ maxHeight: 400.0\n'
       '                     │ │\n'
-      '                     │ └─child: RenderCustomPaint#00000\n'
+      '                     │ └─child: RenderCustomPaint#00000 NEEDS-PAINT\n'
       '                     │     parentData: <none> (can use size)\n'
       '                     │     constraints: BoxConstraints(w=800.0, h=400.0)\n'
       '                     │     size: Size(800.0, 400.0)\n'
@@ -448,14 +452,14 @@ void main() {
       '                     │     constraints: BoxConstraints(w=800.0, h=400.0)\n'
       '                     │     size: Size(800.0, 400.0)\n'
       '                     │\n'
-      '                     ├─child with index 7: RenderLimitedBox#00000\n'
+      '                     ├─child with index 7: RenderLimitedBox#00000 NEEDS-PAINT\n'
       '                     ╎ │ parentData: index=7; layoutOffset=2800.0\n'
       '                     ╎ │ constraints: BoxConstraints(w=800.0, h=400.0)\n'
       '                     ╎ │ size: Size(800.0, 400.0)\n'
       '                     ╎ │ maxWidth: 400.0\n'
       '                     ╎ │ maxHeight: 400.0\n'
       '                     ╎ │\n'
-      '                     ╎ └─child: RenderCustomPaint#00000\n'
+      '                     ╎ └─child: RenderCustomPaint#00000 NEEDS-PAINT\n'
       '                     ╎     parentData: <none> (can use size)\n'
       '                     ╎     constraints: BoxConstraints(w=800.0, h=400.0)\n'
       '                     ╎     size: Size(800.0, 400.0)\n'

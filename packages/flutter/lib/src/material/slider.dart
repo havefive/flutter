@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart' show timeDilation;
@@ -15,6 +16,18 @@ import 'debug.dart';
 import 'material.dart';
 import 'slider_theme.dart';
 import 'theme.dart';
+
+// Examples can assume:
+// int _dollars = 0;
+// int _duelCommandment = 1;
+// void setState(VoidCallback fn) { }
+
+/// A callback that formats a numeric value from a [Slider] widget.
+///
+/// See also:
+///
+///   * [Slider.semanticFormatterCallback], which shows an example use case.
+typedef SemanticFormatterCallback = String Function(double value);
 
 /// A Material Design slider.
 ///
@@ -46,7 +59,8 @@ import 'theme.dart';
 /// of the slider changes, the widget calls the [onChanged] callback. Most
 /// widgets that use a slider will listen for the [onChanged] callback and
 /// rebuild the slider with a new [value] to update the visual appearance of the
-/// slider.
+/// slider. To know when the value starts to change, or when it is done
+/// changing, set the optional callbacks [onChangeStart] and/or [onChangeEnd].
 ///
 /// By default, a slider will be as wide as possible, centered vertically. When
 /// given unbounded constraints, it will attempt to make the track 144 pixels
@@ -83,7 +97,12 @@ class Slider extends StatefulWidget {
   /// the slider.
   ///
   /// * [value] determines currently selected value for this slider.
-  /// * [onChanged] is called when the user selects a new value for the slider.
+  /// * [onChanged] is called while the user is selecting a new value for the
+  ///   slider.
+  /// * [onChangeStart] is called when the user starts to select a new value for
+  ///   the slider.
+  /// * [onChangeEnd] is called when the user is done selecting a new value for
+  ///   the slider.
   ///
   /// You can override some of the colors with the [activeColor] and
   /// [inactiveColor] properties, although more fine-grained control of the
@@ -92,12 +111,15 @@ class Slider extends StatefulWidget {
     Key key,
     @required this.value,
     @required this.onChanged,
-    this.min: 0.0,
-    this.max: 1.0,
+    this.onChangeStart,
+    this.onChangeEnd,
+    this.min = 0.0,
+    this.max = 1.0,
     this.divisions,
     this.label,
     this.activeColor,
     this.inactiveColor,
+    this.semanticFormatterCallback,
   }) : assert(value != null),
        assert(min != null),
        assert(max != null),
@@ -111,7 +133,8 @@ class Slider extends StatefulWidget {
   /// The slider's thumb is drawn at a position that corresponds to this value.
   final double value;
 
-  /// Called when the user selects a new value for the slider.
+  /// Called during a drag when the user is selecting a new value for the slider
+  /// by dragging.
   ///
   /// The slider passes the new value to the callback but does not actually
   /// change state until the parent widget rebuilds the slider with the new
@@ -123,8 +146,10 @@ class Slider extends StatefulWidget {
   /// [StatefulWidget] using the [State.setState] method, so that the parent
   /// gets rebuilt; for example:
   ///
+  /// {@tool sample}
+  ///
   /// ```dart
-  /// new Slider(
+  /// Slider(
   ///   value: _duelCommandment.toDouble(),
   ///   min: 1.0,
   ///   max: 10.0,
@@ -137,7 +162,84 @@ class Slider extends StatefulWidget {
   ///   },
   /// )
   /// ```
+  /// {@end-tool}
+  ///
+  /// See also:
+  ///
+  ///  * [onChangeStart] for a callback that is called when the user starts
+  ///    changing the value.
+  ///  * [onChangeEnd] for a callback that is called when the user stops
+  ///    changing the value.
   final ValueChanged<double> onChanged;
+
+  /// Called when the user starts selecting a new value for the slider.
+  ///
+  /// This callback shouldn't be used to update the slider [value] (use
+  /// [onChanged] for that), but rather to be notified when the user has started
+  /// selecting a new value by starting a drag or with a tap.
+  ///
+  /// The value passed will be the last [value] that the slider had before the
+  /// change began.
+  ///
+  /// {@tool sample}
+  ///
+  /// ```dart
+  /// Slider(
+  ///   value: _duelCommandment.toDouble(),
+  ///   min: 1.0,
+  ///   max: 10.0,
+  ///   divisions: 10,
+  ///   label: '$_duelCommandment',
+  ///   onChanged: (double newValue) {
+  ///     setState(() {
+  ///       _duelCommandment = newValue.round();
+  ///     });
+  ///   },
+  ///   onChangeStart: (double startValue) {
+  ///     print('Started change at $startValue');
+  ///   },
+  /// )
+  /// ```
+  /// {@end-tool}
+  ///
+  /// See also:
+  ///
+  ///  * [onChangeEnd] for a callback that is called when the value change is
+  ///    complete.
+  final ValueChanged<double> onChangeStart;
+
+  /// Called when the user is done selecting a new value for the slider.
+  ///
+  /// This callback shouldn't be used to update the slider [value] (use
+  /// [onChanged] for that), but rather to know when the user has completed
+  /// selecting a new [value] by ending a drag or a click.
+  ///
+  /// {@tool sample}
+  ///
+  /// ```dart
+  /// Slider(
+  ///   value: _duelCommandment.toDouble(),
+  ///   min: 1.0,
+  ///   max: 10.0,
+  ///   divisions: 10,
+  ///   label: '$_duelCommandment',
+  ///   onChanged: (double newValue) {
+  ///     setState(() {
+  ///       _duelCommandment = newValue.round();
+  ///     });
+  ///   },
+  ///   onChangeEnd: (double newValue) {
+  ///     print('Ended change on $newValue');
+  ///   },
+  /// )
+  /// ```
+  /// {@end-tool}
+  ///
+  /// See also:
+  ///
+  ///  * [onChangeStart] for a callback that is called when a value change
+  ///    begins.
+  final ValueChanged<double> onChangeEnd;
 
   /// The minimum value the user can select.
   ///
@@ -199,21 +301,52 @@ class Slider extends StatefulWidget {
   /// appearance of various components of the slider.
   final Color inactiveColor;
 
+  /// The callback used to create a semantic value from a slider value.
+  ///
+  /// Defaults to formatting values as a percentage.
+  ///
+  /// This is used by accessibility frameworks like TalkBack on Android to
+  /// inform users what the currently selected value is with more context.
+  ///
+  /// {@tool sample}
+  ///
+  /// In the example below, a slider for currency values is configured to
+  /// announce a value with a currency label.
+  ///
+  /// ```dart
+  /// Slider(
+  ///   value: _dollars.toDouble(),
+  ///   min: 20.0,
+  ///   max: 330.0,
+  ///   label: '$_dollars dollars',
+  ///   onChanged: (double newValue) {
+  ///     setState(() {
+  ///       _dollars = newValue.round();
+  ///     });
+  ///   },
+  ///   semanticFormatterCallback: (double newValue) {
+  ///     return '${newValue.round()} dollars';
+  ///   }
+  ///  )
+  /// ```
+  /// {@end-tool}
+  final SemanticFormatterCallback semanticFormatterCallback;
+
   @override
-  _SliderState createState() => new _SliderState();
+  _SliderState createState() => _SliderState();
 
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties.add(new DoubleProperty('value', value));
-    properties.add(new DoubleProperty('min', min));
-    properties.add(new DoubleProperty('max', max));
+    properties.add(DoubleProperty('value', value));
+    properties.add(DoubleProperty('min', min));
+    properties.add(DoubleProperty('max', max));
   }
 }
 
 class _SliderState extends State<Slider> with TickerProviderStateMixin {
-  static const Duration enableAnimationDuration = const Duration(milliseconds: 75);
-  static const Duration valueIndicatorAnimationDuration = const Duration(milliseconds: 100);
+  static const Duration enableAnimationDuration = Duration(milliseconds: 75);
+  static const Duration valueIndicatorAnimationDuration = Duration(milliseconds: 100);
 
   // Animation controller that is run when the overlay (a.k.a radial reaction)
   // is shown in response to user interaction.
@@ -231,19 +364,19 @@ class _SliderState extends State<Slider> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    overlayController = new AnimationController(
+    overlayController = AnimationController(
       duration: kRadialReactionDuration,
       vsync: this,
     );
-    valueIndicatorController = new AnimationController(
+    valueIndicatorController = AnimationController(
       duration: valueIndicatorAnimationDuration,
       vsync: this,
     );
-    enableController = new AnimationController(
+    enableController = AnimationController(
       duration: enableAnimationDuration,
       vsync: this,
     );
-    positionController = new AnimationController(
+    positionController = AnimationController(
       duration: Duration.zero,
       vsync: this,
     );
@@ -267,6 +400,16 @@ class _SliderState extends State<Slider> with TickerProviderStateMixin {
     if (lerpValue != widget.value) {
       widget.onChanged(lerpValue);
     }
+  }
+
+  void _handleDragStart(double value) {
+    assert(widget.onChangeStart != null);
+    widget.onChangeStart(_lerp(value));
+  }
+
+  void _handleDragEnd(double value) {
+    assert(widget.onChangeEnd != null);
+    widget.onChangeEnd(_lerp(value));
   }
 
   // Returns a number between min and max, proportional to value, which must
@@ -306,14 +449,17 @@ class _SliderState extends State<Slider> with TickerProviderStateMixin {
       );
     }
 
-    return new _SliderRenderObjectWidget(
+    return _SliderRenderObjectWidget(
       value: _unlerp(widget.value),
       divisions: widget.divisions,
       label: widget.label,
       sliderTheme: sliderTheme,
       mediaQueryData: MediaQuery.of(context),
       onChanged: (widget.onChanged != null) && (widget.max > widget.min) ? _handleChanged : null,
+      onChangeStart: widget.onChangeStart != null ? _handleDragStart : null,
+      onChangeEnd: widget.onChangeEnd != null ? _handleDragEnd : null,
       state: this,
+      semanticFormatterCallback: widget.semanticFormatterCallback,
     );
   }
 }
@@ -327,7 +473,10 @@ class _SliderRenderObjectWidget extends LeafRenderObjectWidget {
     this.sliderTheme,
     this.mediaQueryData,
     this.onChanged,
+    this.onChangeStart,
+    this.onChangeEnd,
     this.state,
+    this.semanticFormatterCallback,
   }) : super(key: key);
 
   final double value;
@@ -336,11 +485,14 @@ class _SliderRenderObjectWidget extends LeafRenderObjectWidget {
   final SliderThemeData sliderTheme;
   final MediaQueryData mediaQueryData;
   final ValueChanged<double> onChanged;
+  final ValueChanged<double> onChangeStart;
+  final ValueChanged<double> onChangeEnd;
+  final SemanticFormatterCallback semanticFormatterCallback;
   final _SliderState state;
 
   @override
   _RenderSlider createRenderObject(BuildContext context) {
-    return new _RenderSlider(
+    return _RenderSlider(
       value: value,
       divisions: divisions,
       label: label,
@@ -348,8 +500,12 @@ class _SliderRenderObjectWidget extends LeafRenderObjectWidget {
       theme: Theme.of(context),
       mediaQueryData: mediaQueryData,
       onChanged: onChanged,
+      onChangeStart: onChangeStart,
+      onChangeEnd: onChangeEnd,
       state: state,
       textDirection: Directionality.of(context),
+      semanticFormatterCallback: semanticFormatterCallback,
+      platform: Theme.of(context).platform,
     );
   }
 
@@ -363,7 +519,11 @@ class _SliderRenderObjectWidget extends LeafRenderObjectWidget {
       ..theme = Theme.of(context)
       ..mediaQueryData = mediaQueryData
       ..onChanged = onChanged
-      ..textDirection = Directionality.of(context);
+      ..onChangeStart = onChangeStart
+      ..onChangeEnd = onChangeEnd
+      ..textDirection = Directionality.of(context)
+      ..semanticFormatterCallback = semanticFormatterCallback
+      ..platform = Theme.of(context).platform;
     // Ticker provider cannot change since there's a 1:1 relationship between
     // the _SliderRenderObjectWidget object and the _SliderState object.
   }
@@ -377,12 +537,18 @@ class _RenderSlider extends RenderBox {
     SliderThemeData sliderTheme,
     ThemeData theme,
     MediaQueryData mediaQueryData,
+    TargetPlatform platform,
     ValueChanged<double> onChanged,
+    SemanticFormatterCallback semanticFormatterCallback,
+    this.onChangeStart,
+    this.onChangeEnd,
     @required _SliderState state,
     @required TextDirection textDirection,
   }) : assert(value != null && value >= 0.0 && value <= 1.0),
        assert(state != null),
        assert(textDirection != null),
+       _platform = platform,
+       _semanticFormatterCallback = semanticFormatterCallback,
        _label = label,
        _value = value,
        _divisions = divisions,
@@ -393,47 +559,46 @@ class _RenderSlider extends RenderBox {
        _state = state,
        _textDirection = textDirection {
     _updateLabelPainter();
-    final GestureArenaTeam team = new GestureArenaTeam();
-    _drag = new HorizontalDragGestureRecognizer()
+    final GestureArenaTeam team = GestureArenaTeam();
+    _drag = HorizontalDragGestureRecognizer()
       ..team = team
       ..onStart = _handleDragStart
       ..onUpdate = _handleDragUpdate
       ..onEnd = _handleDragEnd
       ..onCancel = _endInteraction;
-    _tap = new TapGestureRecognizer()
+    _tap = TapGestureRecognizer()
       ..team = team
       ..onTapDown = _handleTapDown
       ..onTapUp = _handleTapUp
       ..onTapCancel = _endInteraction;
-    _overlayAnimation = new CurvedAnimation(
+    _overlayAnimation = CurvedAnimation(
       parent: _state.overlayController,
       curve: Curves.fastOutSlowIn,
     );
-    _valueIndicatorAnimation = new CurvedAnimation(
+    _valueIndicatorAnimation = CurvedAnimation(
       parent: _state.valueIndicatorController,
       curve: Curves.fastOutSlowIn,
     );
-    _enableAnimation = new CurvedAnimation(
+    _enableAnimation = CurvedAnimation(
       parent: _state.enableController,
       curve: Curves.easeInOut,
     );
   }
 
-  static const Duration _positionAnimationDuration = const Duration(milliseconds: 75);
+  static const Duration _positionAnimationDuration = Duration(milliseconds: 75);
   static const double _overlayRadius = 16.0;
   static const double _overlayDiameter = _overlayRadius * 2.0;
   static const double _trackHeight = 2.0;
   static const double _preferredTrackWidth = 144.0;
   static const double _preferredTotalWidth = _preferredTrackWidth + _overlayDiameter;
-  static const Duration _minimumInteractionTime = const Duration(milliseconds: 500);
-  static const double _adjustmentUnit = 0.1; // Matches iOS implementation of material slider.
-  static final Tween<double> _overlayRadiusTween = new Tween<double>(begin: 0.0, end: _overlayRadius);
+  static const Duration _minimumInteractionTime = Duration(milliseconds: 500);
+  static final Animatable<double> _overlayRadiusTween = Tween<double>(begin: 0.0, end: _overlayRadius);
 
   _SliderState _state;
   Animation<double> _overlayAnimation;
   Animation<double> _valueIndicatorAnimation;
   Animation<double> _enableAnimation;
-  final TextPainter _labelPainter = new TextPainter();
+  final TextPainter _labelPainter = TextPainter();
   HorizontalDragGestureRecognizer _drag;
   TapGestureRecognizer _tap;
   bool _active = false;
@@ -462,11 +627,30 @@ class _RenderSlider extends RenderBox {
       final double distance = (_value - _state.positionController.value).abs();
       _state.positionController.duration = distance != 0.0
         ? _positionAnimationDuration * (1.0 / distance)
-        : 0.0;
+        : Duration.zero;
       _state.positionController.animateTo(convertedValue, curve: Curves.easeInOut);
     } else {
       _state.positionController.value = convertedValue;
     }
+    markNeedsSemanticsUpdate();
+  }
+
+  TargetPlatform _platform;
+  TargetPlatform get platform => _platform;
+  set platform(TargetPlatform value) {
+    if (_platform == value)
+      return;
+    _platform = value;
+    markNeedsSemanticsUpdate();
+  }
+
+  SemanticFormatterCallback _semanticFormatterCallback;
+  SemanticFormatterCallback get semanticFormatterCallback => _semanticFormatterCallback;
+  set semanticFormatterCallback(SemanticFormatterCallback value) {
+    if (_semanticFormatterCallback == value)
+      return;
+    _semanticFormatterCallback = value;
+    markNeedsSemanticsUpdate();
   }
 
   int get divisions => _divisions;
@@ -540,6 +724,9 @@ class _RenderSlider extends RenderBox {
     }
   }
 
+  ValueChanged<double> onChangeStart;
+  ValueChanged<double> onChangeEnd;
+
   TextDirection get textDirection => _textDirection;
   TextDirection _textDirection;
   set textDirection(TextDirection value) {
@@ -570,10 +757,23 @@ class _RenderSlider extends RenderBox {
     return showValueIndicator;
   }
 
+  double get _adjustmentUnit {
+    switch (_platform) {
+      case TargetPlatform.iOS:
+      // Matches iOS implementation of material slider.
+        return 0.1;
+      case TargetPlatform.android:
+      case TargetPlatform.fuchsia:
+      default:
+      // Matches Android implementation of material slider.
+        return 0.05;
+    }
+  }
+
   void _updateLabelPainter() {
     if (label != null) {
       _labelPainter
-        ..text = new TextSpan(
+        ..text = TextSpan(
           style: _sliderTheme.valueIndicatorTextStyle,
           text: label,
         )
@@ -633,13 +833,19 @@ class _RenderSlider extends RenderBox {
   void _startInteraction(Offset globalPosition) {
     if (isInteractive) {
       _active = true;
+      // We supply the *current* value as the start location, so that if we have
+      // a tap, it consists of a call to onChangeStart with the previous value and
+      // a call to onChangeEnd with the new value.
+      if (onChangeStart != null) {
+        onChangeStart(_discretize(value));
+      }
       _currentDragValue = _getValueFromGlobalPosition(globalPosition);
       onChanged(_discretize(_currentDragValue));
       _state.overlayController.forward();
       if (showValueIndicator) {
         _state.valueIndicatorController.forward();
         _state.interactionTimer?.cancel();
-        _state.interactionTimer = new Timer(_minimumInteractionTime * timeDilation, () {
+        _state.interactionTimer = Timer(_minimumInteractionTime * timeDilation, () {
           _state.interactionTimer = null;
           if (!_active &&
               _state.valueIndicatorController.status == AnimationStatus.completed) {
@@ -652,6 +858,9 @@ class _RenderSlider extends RenderBox {
 
   void _endInteraction() {
     if (_active && _state.mounted) {
+      if (onChangeEnd != null) {
+        onChangeEnd(_discretize(_currentDragValue));
+      }
       _active = false;
       _currentDragValue = 0.0;
       _state.overlayController.reverse();
@@ -723,7 +932,7 @@ class _RenderSlider extends RenderBox {
 
   @override
   void performResize() {
-    size = new Size(
+    size = Size(
       constraints.hasBoundedWidth ? constraints.maxWidth : _preferredTotalWidth,
       constraints.hasBoundedHeight ? constraints.maxHeight : _overlayDiameter,
     );
@@ -745,7 +954,7 @@ class _RenderSlider extends RenderBox {
       if (dx >= 3.0 * _trackHeight) {
         for (int i = 0; i <= divisions; i += 1) {
           final double left = trackLeft.left + i * dx;
-          final Offset center = new Offset(left + tickRadius, trackLeft.top + tickRadius);
+          final Offset center = Offset(left + tickRadius, trackLeft.top + tickRadius);
           if (trackLeft.contains(center)) {
             canvas.drawCircle(center, tickRadius, leftPaint);
           } else if (trackRight.contains(center)) {
@@ -758,12 +967,12 @@ class _RenderSlider extends RenderBox {
 
   void _paintOverlay(Canvas canvas, Offset center) {
     if (!_overlayAnimation.isDismissed) {
-      // TODO(gspencer) : We don't really follow the spec here for overlays.
+      // TODO(gspencer): We don't really follow the spec here for overlays.
       // The spec says to use 16% opacity for drawing over light material,
       // and 32% for colored material, but we don't really have a way to
       // know what the underlying color is, so there's no easy way to
       // implement this. Choosing the "light" version for now.
-      final Paint overlayPaint = new Paint()..color = _sliderTheme.overlayColor;
+      final Paint overlayPaint = Paint()..color = _sliderTheme.overlayColor;
       final double radius = _overlayRadiusTween.evaluate(_overlayAnimation);
       canvas.drawCircle(center, radius, overlayPaint);
     }
@@ -775,15 +984,15 @@ class _RenderSlider extends RenderBox {
 
     final double trackLength = size.width - 2 * _overlayRadius;
     final double value = _state.positionController.value;
-    final ColorTween activeTrackEnableColor = new ColorTween(begin: _sliderTheme.disabledActiveTrackColor, end: _sliderTheme.activeTrackColor);
-    final ColorTween inactiveTrackEnableColor = new ColorTween(begin: _sliderTheme.disabledInactiveTrackColor, end: _sliderTheme.inactiveTrackColor);
-    final ColorTween activeTickMarkEnableColor = new ColorTween(begin: _sliderTheme.disabledActiveTickMarkColor, end: _sliderTheme.activeTickMarkColor);
-    final ColorTween inactiveTickMarkEnableColor = new ColorTween(begin: _sliderTheme.disabledInactiveTickMarkColor, end: _sliderTheme.inactiveTickMarkColor);
+    final ColorTween activeTrackEnableColor = ColorTween(begin: _sliderTheme.disabledActiveTrackColor, end: _sliderTheme.activeTrackColor);
+    final ColorTween inactiveTrackEnableColor = ColorTween(begin: _sliderTheme.disabledInactiveTrackColor, end: _sliderTheme.inactiveTrackColor);
+    final ColorTween activeTickMarkEnableColor = ColorTween(begin: _sliderTheme.disabledActiveTickMarkColor, end: _sliderTheme.activeTickMarkColor);
+    final ColorTween inactiveTickMarkEnableColor = ColorTween(begin: _sliderTheme.disabledInactiveTickMarkColor, end: _sliderTheme.inactiveTickMarkColor);
 
-    final Paint activeTrackPaint = new Paint()..color = activeTrackEnableColor.evaluate(_enableAnimation);
-    final Paint inactiveTrackPaint = new Paint()..color = inactiveTrackEnableColor.evaluate(_enableAnimation);
-    final Paint activeTickMarkPaint = new Paint()..color = activeTickMarkEnableColor.evaluate(_enableAnimation);
-    final Paint inactiveTickMarkPaint = new Paint()..color = inactiveTickMarkEnableColor.evaluate(_enableAnimation);
+    final Paint activeTrackPaint = Paint()..color = activeTrackEnableColor.evaluate(_enableAnimation);
+    final Paint inactiveTrackPaint = Paint()..color = inactiveTrackEnableColor.evaluate(_enableAnimation);
+    final Paint activeTickMarkPaint = Paint()..color = activeTickMarkEnableColor.evaluate(_enableAnimation);
+    final Paint inactiveTickMarkPaint = Paint()..color = inactiveTickMarkEnableColor.evaluate(_enableAnimation);
 
     double visualPosition;
     Paint leftTrackPaint;
@@ -819,10 +1028,10 @@ class _RenderSlider extends RenderBox {
     final double thumbRadius = _sliderTheme.thumbShape.getPreferredSize(isInteractive, isDiscrete).width / 2.0;
     final double trackActiveLeft = math.max(0.0, trackActive - thumbRadius - thumbGap * (1.0 - _enableAnimation.value));
     final double trackActiveRight = math.min(trackActive + thumbRadius + thumbGap * (1.0 - _enableAnimation.value), trackRight);
-    final Rect trackLeftRect = new Rect.fromLTRB(trackLeft, trackTop, trackActiveLeft, trackBottom);
-    final Rect trackRightRect = new Rect.fromLTRB(trackActiveRight, trackTop, trackRight, trackBottom);
+    final Rect trackLeftRect = Rect.fromLTRB(trackLeft, trackTop, trackActiveLeft, trackBottom);
+    final Rect trackRightRect = Rect.fromLTRB(trackActiveRight, trackTop, trackRight, trackBottom);
 
-    final Offset thumbCenter = new Offset(trackActive, trackVerticalCenter);
+    final Offset thumbCenter = Offset(trackActive, trackVerticalCenter);
 
     // Paint the track.
     if (visualPosition > 0.0) {
@@ -880,8 +1089,18 @@ class _RenderSlider extends RenderBox {
 
     config.isSemanticBoundary = isInteractive;
     if (isInteractive) {
+      config.textDirection = textDirection;
       config.onIncrease = _increaseAction;
       config.onDecrease = _decreaseAction;
+      if (semanticFormatterCallback != null) {
+        config.value = semanticFormatterCallback(_state._lerp(value));
+        config.increasedValue = semanticFormatterCallback(_state._lerp((value + _semanticActionUnit).clamp(0.0, 1.0)));
+        config.decreasedValue = semanticFormatterCallback(_state._lerp((value - _semanticActionUnit).clamp(0.0, 1.0)));
+      } else {
+        config.value = '${(value * 100).round()}%';
+        config.increasedValue = '${((value + _semanticActionUnit).clamp(0.0, 1.0) * 100).round()}%';
+        config.decreasedValue = '${((value - _semanticActionUnit).clamp(0.0, 1.0) * 100).round()}%';
+      }
     }
   }
 

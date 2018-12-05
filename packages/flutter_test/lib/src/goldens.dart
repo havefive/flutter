@@ -8,7 +8,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
-import 'package:test/test.dart' show TestFailure;
+import 'package:test_api/test_api.dart' as test_package show TestFailure;
 
 /// Compares rasterized image bytes against a golden image file.
 ///
@@ -51,10 +51,18 @@ abstract class GoldenFileComparator {
 ///
 /// This comparator is used as the backend for [matchesGoldenFile].
 ///
-/// The default comparator, [LocalFileComparator], will treat the golden key as
+/// When using `flutter test`, a comparator implemented by [LocalFileComparator]
+/// is used if no other comparator is specified. It treats the golden key as
 /// a relative path from the test file's directory. It will then load the
 /// golden file's bytes from disk and perform a byte-for-byte comparison of the
 /// encoded PNGs, returning true only if there's an exact match.
+///
+/// When using `flutter test --update-goldens`, the [LocalFileComparator]
+/// updates the files on disk to match the rendering.
+///
+/// When using `flutter run`, the default comparator ([TrivialComparator])
+/// is used. It prints a message to the console but otherwise does nothing. This
+/// allows tests to be developed visually on a real device.
 ///
 /// Callers may choose to override the default comparator by setting this to a
 /// custom comparator during test set-up (or using directory-level test
@@ -67,12 +75,11 @@ abstract class GoldenFileComparator {
 ///
 ///  * [flutter_test] for more information about how to configure tests at the
 ///    directory-level.
-GoldenFileComparator get goldenFileComparator {
-  return _goldenFileComparator == const _UninitializedComparator() ? null : _goldenFileComparator;
-}
-GoldenFileComparator _goldenFileComparator = const _UninitializedComparator();
-set goldenFileComparator(GoldenFileComparator comparator) {
-  _goldenFileComparator = comparator ?? const _UninitializedComparator();
+GoldenFileComparator get goldenFileComparator => _goldenFileComparator;
+GoldenFileComparator _goldenFileComparator = const TrivialComparator._();
+set goldenFileComparator(GoldenFileComparator value) {
+  assert(value != null);
+  _goldenFileComparator = value;
 }
 
 /// Whether golden files should be automatically updated during tests rather
@@ -103,23 +110,26 @@ bool autoUpdateGoldenFiles = false;
 /// via `flutter run`. In this case, the [compare] method will just print a
 /// message that it would have otherwise run a real comparison, and it will
 /// return trivial success.
-class _UninitializedComparator implements GoldenFileComparator {
-  const _UninitializedComparator();
+///
+/// This class can't be constructed. It represents the default value of
+/// [goldenFileComparator].
+class TrivialComparator implements GoldenFileComparator {
+  const TrivialComparator._();
 
   @override
   Future<bool> compare(Uint8List imageBytes, Uri golden) {
     debugPrint('Golden file comparison requested for "$golden"; skipping...');
-    return new Future<bool>.value(true);
+    return Future<bool>.value(true);
   }
 
   @override
   Future<void> update(Uri golden, Uint8List imageBytes) {
     // [autoUpdateGoldenFiles] should never be set in a live widget binding.
-    throw new StateError('goldenFileComparator has not been initialized');
+    throw StateError('goldenFileComparator has not been initialized');
   }
 }
 
-/// The default [GoldenFileComparator] implementation.
+/// The default [GoldenFileComparator] implementation for `flutter test`.
 ///
 /// This comparator loads golden files from the local file system, treating the
 /// golden key as a relative path from the test file's directory.
@@ -128,19 +138,22 @@ class _UninitializedComparator implements GoldenFileComparator {
 /// comparison of the encoded PNGs, returning true only if there's an exact
 /// match. This means it will fail the test if two PNGs represent the same
 /// pixels but are encoded differently.
+///
+/// When using `flutter test --update-goldens`, [LocalFileComparator]
+/// updates the files on disk to match the rendering.
 class LocalFileComparator implements GoldenFileComparator {
   /// Creates a new [LocalFileComparator] for the specified [testFile].
   ///
   /// Golden file keys will be interpreted as file paths relative to the
   /// directory in which [testFile] resides.
   ///
-  /// The [testFile] URI must represent a file.
+  /// The [testFile] URL must represent a file.
   LocalFileComparator(Uri testFile, {path.Style pathStyle})
       : basedir = _getBasedir(testFile, pathStyle),
         _path = _getPath(pathStyle);
 
   static path.Context _getPath(path.Style style) {
-    return new path.Context(style: style ?? path.Style.platform);
+    return path.Context(style: style ?? path.Style.platform);
   }
 
   static Uri _getBasedir(Uri testFile, path.Style pathStyle) {
@@ -165,10 +178,10 @@ class LocalFileComparator implements GoldenFileComparator {
   Future<bool> compare(Uint8List imageBytes, Uri golden) async {
     final File goldenFile = _getFile(golden);
     if (!goldenFile.existsSync()) {
-      throw new TestFailure('Could not be compared against non-existent file: "$golden"');
+      throw test_package.TestFailure('Could not be compared against non-existent file: "$golden"');
     }
     final List<int> goldenBytes = await goldenFile.readAsBytes();
-    return _areListsEqual(imageBytes, goldenBytes);
+    return _areListsEqual<int>(imageBytes, goldenBytes);
   }
 
   @override
@@ -179,7 +192,7 @@ class LocalFileComparator implements GoldenFileComparator {
   }
 
   File _getFile(Uri golden) {
-    return new File(_path.join(_path.fromUri(basedir), _path.fromUri(golden.path)));
+    return File(_path.join(_path.fromUri(basedir), _path.fromUri(golden.path)));
   }
 
   static bool _areListsEqual<T>(List<T> list1, List<T> list2) {

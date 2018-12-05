@@ -6,19 +6,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-Future<Null> pumpTest(WidgetTester tester, TargetPlatform platform) async {
-  await tester.pumpWidget(new MaterialApp(
-    theme: new ThemeData(
+Future<void> pumpTest(WidgetTester tester, TargetPlatform platform) async {
+  await tester.pumpWidget(MaterialApp(
+    theme: ThemeData(
       platform: platform,
     ),
-    home: new CustomScrollView(
-      slivers: const <Widget>[
-        const SliverToBoxAdapter(child: const SizedBox(height: 2000.0)),
+    home: const CustomScrollView(
+      slivers: <Widget>[
+        SliverToBoxAdapter(child: SizedBox(height: 2000.0)),
       ],
     ),
   ));
   await tester.pump(const Duration(seconds: 5)); // to let the theme animate
-  return null;
 }
 
 const double dragOffset = 200.0;

@@ -4,11 +4,13 @@
 
 import 'package:flutter/material.dart';
 
+import '../../gallery/demo.dart';
+
 class BottomAppBarDemo extends StatefulWidget {
   static const String routeName = '/material/bottom_app_bar';
 
   @override
-  State createState() => new _BottomAppBarDemoState();
+  State createState() => _BottomAppBarDemoState();
 }
 
 // Flutter generally frowns upon abbrevation however this class uses two
@@ -16,44 +18,44 @@ class BottomAppBarDemo extends StatefulWidget {
 // for bottom application bar.
 
 class _BottomAppBarDemoState extends State<BottomAppBarDemo> {
-  static final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+  static final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // FAB shape
 
-  static const _ChoiceValue<Widget> kNoFab = const _ChoiceValue<Widget>(
+  static const _ChoiceValue<Widget> kNoFab = _ChoiceValue<Widget>(
     title: 'None',
     label: 'do not show a floating action button',
     value: null,
   );
 
-  static const _ChoiceValue<Widget> kCircularFab = const _ChoiceValue<Widget>(
+  static const _ChoiceValue<Widget> kCircularFab = _ChoiceValue<Widget>(
     title: 'Circular',
     label: 'circular floating action button',
-    value: const FloatingActionButton(
+    value: FloatingActionButton(
       onPressed: _showSnackbar,
-      child: const Icon(Icons.add),
+      child: Icon(Icons.add, semanticLabel: 'Action'),
       backgroundColor: Colors.orange,
     ),
   );
 
-  static const _ChoiceValue<Widget> kDiamondFab = const _ChoiceValue<Widget>(
+  static const _ChoiceValue<Widget> kDiamondFab = _ChoiceValue<Widget>(
     title: 'Diamond',
     label: 'diamond shape floating action button',
-    value: const _DiamondFab(
+    value: _DiamondFab(
       onPressed: _showSnackbar,
-      child: const Icon(Icons.add),
+      child: Icon(Icons.add, semanticLabel: 'Action'),
     ),
   );
 
   // Notch
 
-  static const _ChoiceValue<bool> kShowNotchTrue = const _ChoiceValue<bool>(
+  static const _ChoiceValue<bool> kShowNotchTrue = _ChoiceValue<bool>(
     title: 'On',
     label: 'show bottom appbar notch',
     value: true,
   );
 
-  static const _ChoiceValue<bool> kShowNotchFalse = const _ChoiceValue<bool>(
+  static const _ChoiceValue<bool> kShowNotchFalse = _ChoiceValue<bool>(
     title: 'Off',
     label: 'do not show bottom appbar notch',
     value: false,
@@ -61,25 +63,25 @@ class _BottomAppBarDemoState extends State<BottomAppBarDemo> {
 
   // FAB Position
 
-  static const _ChoiceValue<FloatingActionButtonLocation> kFabEndDocked = const _ChoiceValue<FloatingActionButtonLocation>(
+  static const _ChoiceValue<FloatingActionButtonLocation> kFabEndDocked = _ChoiceValue<FloatingActionButtonLocation>(
     title: 'Attached - End',
     label: 'floating action button is docked at the end of the bottom app bar',
     value: FloatingActionButtonLocation.endDocked,
   );
 
-  static const _ChoiceValue<FloatingActionButtonLocation> kFabCenterDocked = const _ChoiceValue<FloatingActionButtonLocation>(
+  static const _ChoiceValue<FloatingActionButtonLocation> kFabCenterDocked = _ChoiceValue<FloatingActionButtonLocation>(
     title: 'Attached - Center',
     label: 'floating action button is docked at the center of the bottom app bar',
     value: FloatingActionButtonLocation.centerDocked,
   );
 
-  static const _ChoiceValue<FloatingActionButtonLocation> kFabEndFloat= const _ChoiceValue<FloatingActionButtonLocation>(
+  static const _ChoiceValue<FloatingActionButtonLocation> kFabEndFloat= _ChoiceValue<FloatingActionButtonLocation>(
     title: 'Free - End',
     label: 'floating action button floats above the end of the bottom app bar',
     value: FloatingActionButtonLocation.endFloat,
   );
 
-  static const _ChoiceValue<FloatingActionButtonLocation> kFabCenterFloat = const _ChoiceValue<FloatingActionButtonLocation>(
+  static const _ChoiceValue<FloatingActionButtonLocation> kFabCenterFloat = _ChoiceValue<FloatingActionButtonLocation>(
     title: 'Free - Center',
     label: 'floating action button is floats above the center of the bottom app bar',
     value: FloatingActionButtonLocation.centerFloat,
@@ -91,25 +93,25 @@ class _BottomAppBarDemoState extends State<BottomAppBarDemo> {
       'the floating action button animates to its new position.'
       'The BottomAppBar adapts its shape appropriately.';
     _scaffoldKey.currentState.showSnackBar(
-      const SnackBar(content: const Text(text)),
+      const SnackBar(content: Text(text)),
     );
   }
 
   // App bar color
 
-  static const List<Color> kBabColors = const <Color>[
-    null,
-    const Color(0xFFFFC100),
-    const Color(0xFF91FAFF),
-    const Color(0xFF00D1FF),
-    const Color(0xFF00BCFF),
-    const Color(0xFF009BEE),
+  static const List<_NamedColor> kBabColors = <_NamedColor>[
+    _NamedColor(null, 'Clear'),
+    _NamedColor(Color(0xFFFFC100), 'Orange'),
+    _NamedColor(Color(0xFF91FAFF), 'Light Blue'),
+    _NamedColor(Color(0xFF00D1FF), 'Cyan'),
+    _NamedColor(Color(0xFF00BCFF), 'Cerulean'),
+    _NamedColor(Color(0xFF009BEE), 'Blue'),
   ];
 
   _ChoiceValue<Widget> _fabShape = kCircularFab;
   _ChoiceValue<bool> _showNotch = kShowNotchTrue;
   _ChoiceValue<FloatingActionButtonLocation> _fabLocation = kFabEndDocked;
-  Color _babColor = kBabColors.first;
+  Color _babColor = kBabColors.first.color;
 
   void _onShowNotchChanged(_ChoiceValue<bool> value) {
     setState(() {
@@ -137,14 +139,15 @@ class _BottomAppBarDemoState extends State<BottomAppBarDemo> {
 
   @override
   Widget build(BuildContext context) {
-    return new Scaffold(
+    return Scaffold(
       key: _scaffoldKey,
-      appBar: new AppBar(
+      appBar: AppBar(
         title: const Text('Bottom app bar'),
         elevation: 0.0,
         actions: <Widget>[
-          new IconButton(
-            icon: const Icon(Icons.sentiment_very_satisfied),
+          MaterialDemoDocumentationButton(BottomAppBarDemo.routeName),
+          IconButton(
+            icon: const Icon(Icons.sentiment_very_satisfied, semanticLabel: 'Update shape'),
             onPressed: () {
               setState(() {
                 _fabShape = _fabShape == kCircularFab ? kDiamondFab : kCircularFab;
@@ -153,43 +156,53 @@ class _BottomAppBarDemoState extends State<BottomAppBarDemo> {
           ),
         ],
       ),
-      body: new ListView(
+      body: ListView(
         padding: const EdgeInsets.only(bottom: 88.0),
         children: <Widget>[
           const _Heading('FAB Shape'),
 
-          new _RadioItem<Widget>(kCircularFab, _fabShape, _onFabShapeChanged),
-          new _RadioItem<Widget>(kDiamondFab, _fabShape, _onFabShapeChanged),
-          new _RadioItem<Widget>(kNoFab, _fabShape, _onFabShapeChanged),
+          _RadioItem<Widget>(kCircularFab, _fabShape, _onFabShapeChanged),
+          _RadioItem<Widget>(kDiamondFab, _fabShape, _onFabShapeChanged),
+          _RadioItem<Widget>(kNoFab, _fabShape, _onFabShapeChanged),
 
           const Divider(),
           const _Heading('Notch'),
 
-          new _RadioItem<bool>(kShowNotchTrue, _showNotch, _onShowNotchChanged),
-          new _RadioItem<bool>(kShowNotchFalse, _showNotch, _onShowNotchChanged),
+          _RadioItem<bool>(kShowNotchTrue, _showNotch, _onShowNotchChanged),
+          _RadioItem<bool>(kShowNotchFalse, _showNotch, _onShowNotchChanged),
 
           const Divider(),
           const _Heading('FAB Position'),
 
-          new _RadioItem<FloatingActionButtonLocation>(kFabEndDocked, _fabLocation, _onFabLocationChanged),
-          new _RadioItem<FloatingActionButtonLocation>(kFabCenterDocked, _fabLocation, _onFabLocationChanged),
-          new _RadioItem<FloatingActionButtonLocation>(kFabEndFloat, _fabLocation, _onFabLocationChanged),
-          new _RadioItem<FloatingActionButtonLocation>(kFabCenterFloat, _fabLocation, _onFabLocationChanged),
+          _RadioItem<FloatingActionButtonLocation>(kFabEndDocked, _fabLocation, _onFabLocationChanged),
+          _RadioItem<FloatingActionButtonLocation>(kFabCenterDocked, _fabLocation, _onFabLocationChanged),
+          _RadioItem<FloatingActionButtonLocation>(kFabEndFloat, _fabLocation, _onFabLocationChanged),
+          _RadioItem<FloatingActionButtonLocation>(kFabCenterFloat, _fabLocation, _onFabLocationChanged),
 
           const Divider(),
           const _Heading('App bar color'),
 
-          new _ColorsItem(kBabColors, _babColor, _onBabColorChanged),
+          _ColorsItem(kBabColors, _babColor, _onBabColorChanged),
         ],
       ),
       floatingActionButton: _fabShape.value,
       floatingActionButtonLocation: _fabLocation.value,
-      bottomNavigationBar: new _DemoBottomAppBar(
+      bottomNavigationBar: _DemoBottomAppBar(
         color: _babColor,
         fabLocation: _fabLocation.value,
-        showNotch: _showNotch.value,
+        shape: _selectNotch(),
       ),
     );
+  }
+
+  NotchedShape _selectNotch() {
+    if (!_showNotch.value)
+      return null;
+    if (_fabShape == kCircularFab)
+      return const CircularNotchedRectangle();
+    if (_fabShape == kDiamondFab)
+      return const _DiamondNotchedRectangle();
+    return null;
   }
 }
 
@@ -214,29 +227,29 @@ class _RadioItem<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return new Container(
+    return Container(
       height: 56.0,
       padding: const EdgeInsetsDirectional.only(start: 16.0),
       alignment: AlignmentDirectional.centerStart,
-      child: new MergeSemantics(
-        child: new Row(
+      child: MergeSemantics(
+        child: Row(
           children: <Widget>[
-            new Radio<_ChoiceValue<T>>(
+            Radio<_ChoiceValue<T>>(
               value: value,
               groupValue: groupValue,
               onChanged: onChanged,
             ),
-            new Expanded(
-              child: new Semantics(
+            Expanded(
+              child: Semantics(
                 container: true,
                 button: true,
                 label: value.label,
-                child: new GestureDetector(
+                child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
                     onChanged(value);
                   },
-                  child: new Text(
+                  child: Text(
                     value.title,
                     style: theme.textTheme.subhead,
                   ),
@@ -250,37 +263,46 @@ class _RadioItem<T> extends StatelessWidget {
   }
 }
 
+class _NamedColor {
+  const _NamedColor(this.color, this.name);
+
+  final Color color;
+  final String name;
+}
+
 class _ColorsItem extends StatelessWidget {
   const _ColorsItem(this.colors, this.selectedColor, this.onChanged);
 
-  final List<Color> colors;
+  final List<_NamedColor> colors;
   final Color selectedColor;
   final ValueChanged<Color> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return new ExcludeSemantics(
-      child: new Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: colors.map((Color color) {
-          return new RawMaterialButton(
-            onPressed: () {
-              onChanged(color);
-            },
-            constraints: const BoxConstraints.tightFor(
-              width: 32.0,
-              height: 32.0,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: colors.map<Widget>((_NamedColor namedColor) {
+        return RawMaterialButton(
+          onPressed: () {
+            onChanged(namedColor.color);
+          },
+          constraints: const BoxConstraints.tightFor(
+            width: 32.0,
+            height: 32.0,
+          ),
+          fillColor: namedColor.color,
+          shape: CircleBorder(
+            side: BorderSide(
+              color: namedColor.color == selectedColor ? Colors.black : const Color(0xFFD5D7DA),
+              width: 2.0,
             ),
-            fillColor: color,
-            shape: new CircleBorder(
-              side: new BorderSide(
-                color: color == selectedColor ? Colors.black : const Color(0xFFD5D7DA),
-                width: 2.0,
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+          ),
+          child: Semantics(
+            value: namedColor.name,
+            selected: namedColor.color == selectedColor,
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -293,11 +315,11 @@ class _Heading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return new Container(
+    return Container(
       height: 48.0,
       padding: const EdgeInsetsDirectional.only(start: 56.0),
       alignment: AlignmentDirectional.centerStart,
-      child: new Text(
+      child: Text(
         text,
         style: theme.textTheme.body1.copyWith(
           color: theme.primaryColor,
@@ -308,11 +330,15 @@ class _Heading extends StatelessWidget {
 }
 
 class _DemoBottomAppBar extends StatelessWidget {
-  const _DemoBottomAppBar({ this.color, this.fabLocation, this.showNotch });
+  const _DemoBottomAppBar({
+    this.color,
+    this.fabLocation,
+    this.shape
+  });
 
   final Color color;
   final FloatingActionButtonLocation fabLocation;
-  final bool showNotch;
+  final NotchedShape shape;
 
   static final List<FloatingActionButtonLocation> kCenterLocations = <FloatingActionButtonLocation>[
     FloatingActionButtonLocation.centerDocked,
@@ -322,10 +348,10 @@ class _DemoBottomAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Widget> rowContents = <Widget> [
-      new IconButton(
-        icon: const Icon(Icons.menu),
+      IconButton(
+        icon: const Icon(Icons.menu, semanticLabel: 'Show bottom sheet'),
         onPressed: () {
-          showModalBottomSheet<Null>(
+          showModalBottomSheet<void>(
             context: context,
             builder: (BuildContext context) => const _DemoDrawer(),
           );
@@ -335,33 +361,38 @@ class _DemoBottomAppBar extends StatelessWidget {
 
     if (kCenterLocations.contains(fabLocation)) {
       rowContents.add(
-        const Expanded(child: const SizedBox()),
+        const Expanded(child: SizedBox()),
       );
     }
 
     rowContents.addAll(<Widget> [
-      new IconButton(
-        icon: const Icon(Icons.search),
+      IconButton(
+        icon: const Icon(Icons.search, semanticLabel: 'show search action',),
         onPressed: () {
           Scaffold.of(context).showSnackBar(
-            const SnackBar(content: const Text('This is a dummy search action.')),
+            const SnackBar(content: Text('This is a dummy search action.')),
           );
         },
       ),
-      new IconButton(
-        icon: const Icon(Icons.more_vert),
+      IconButton(
+        icon: Icon(
+          Theme.of(context).platform == TargetPlatform.iOS
+              ? Icons.more_horiz
+              : Icons.more_vert,
+          semanticLabel: 'Show menu actions',
+        ),
         onPressed: () {
           Scaffold.of(context).showSnackBar(
-            const SnackBar(content: const Text('This is a dummy menu action.')),
+            const SnackBar(content: Text('This is a dummy menu action.')),
           );
         },
       ),
     ]);
 
-    return new BottomAppBar(
+    return BottomAppBar(
       color: color,
-      hasNotch: showNotch,
-      child: new Row(children: rowContents),
+      child: Row(children: rowContents),
+      shape: shape,
     );
   }
 }
@@ -372,16 +403,16 @@ class _DemoDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return new Drawer(
-      child: new Column(
+    return Drawer(
+      child: Column(
         children: const <Widget>[
-          const ListTile(
-            leading: const Icon(Icons.search),
-            title: const Text('Search'),
+          ListTile(
+            leading: Icon(Icons.search),
+            title: Text('Search'),
           ),
-          const ListTile(
-            leading: const Icon(Icons.threed_rotation),
-            title: const Text('3D'),
+          ListTile(
+            leading: Icon(Icons.threed_rotation),
+            title: Text('3D'),
           ),
         ],
       ),
@@ -390,64 +421,46 @@ class _DemoDrawer extends StatelessWidget {
 }
 
 // A diamond-shaped floating action button.
-class _DiamondFab extends StatefulWidget {
+class _DiamondFab extends StatelessWidget {
   const _DiamondFab({
     this.child,
-    this.notchMargin: 6.0,
     this.onPressed,
   });
 
   final Widget child;
-  final double notchMargin;
   final VoidCallback onPressed;
 
   @override
-  State createState() => new _DiamondFabState();
-}
-
-class _DiamondFabState extends State<_DiamondFab> {
-
-  VoidCallback _clearComputeNotch;
-
-  @override
   Widget build(BuildContext context) {
-    return new Material(
+    return Material(
       shape: const _DiamondBorder(),
       color: Colors.orange,
-      child: new InkWell(
-        onTap: widget.onPressed,
-        child: new Container(
+      child: InkWell(
+        onTap: onPressed,
+        child: Container(
           width: 56.0,
           height: 56.0,
           child: IconTheme.merge(
-            data: new IconThemeData(color: Theme.of(context).accentIconTheme.color),
-            child: widget.child,
+            data: IconThemeData(color: Theme.of(context).accentIconTheme.color),
+            child: child,
           ),
         ),
       ),
       elevation: 6.0,
     );
   }
+}
+
+class _DiamondNotchedRectangle implements NotchedShape {
+  const _DiamondNotchedRectangle();
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _clearComputeNotch = Scaffold.setFloatingActionButtonNotchFor(context, _computeNotch);
-  }
+  Path getOuterPath(Rect host, Rect guest) {
+    if (!host.overlaps(guest))
+      return Path()..addRect(host);
+    assert(guest.width > 0.0);
 
-  @override
-  void deactivate() {
-    if (_clearComputeNotch != null)
-      _clearComputeNotch();
-    super.deactivate();
-  }
-
-  Path _computeNotch(Rect host, Rect guest, Offset start, Offset end) {
-    final Rect marginedGuest = guest.inflate(widget.notchMargin);
-    if (!host.overlaps(marginedGuest))
-      return new Path()..lineTo(end.dx, end.dy);
-
-    final Rect intersection = marginedGuest.intersect(host);
+    final Rect intersection = guest.intersect(host);
     // We are computing a "V" shaped notch, as in this diagram:
     //    -----\****   /-----
     //          \     /
@@ -461,14 +474,18 @@ class _DiamondFabState extends State<_DiamondFab> {
     //  the host's top edge where the notch starts (marked with "*").
     //  We compute notchToCenter by similar triangles:
     final double notchToCenter =
-      intersection.height * (marginedGuest.height / 2.0)
-      / (marginedGuest.width / 2.0);
+      intersection.height * (guest.height / 2.0)
+      / (guest.width / 2.0);
 
-    return new Path()
-      ..lineTo(marginedGuest.center.dx - notchToCenter, host.top)
-      ..lineTo(marginedGuest.left + marginedGuest.width / 2.0, marginedGuest.bottom)
-      ..lineTo(marginedGuest.center.dx + notchToCenter, host.top)
-      ..lineTo(end.dx, end.dy);
+    return Path()
+      ..moveTo(host.left, host.top)
+      ..lineTo(guest.center.dx - notchToCenter, host.top)
+      ..lineTo(guest.left + guest.width / 2.0, guest.bottom)
+      ..lineTo(guest.center.dx + notchToCenter, host.top)
+      ..lineTo(host.right, host.top)
+      ..lineTo(host.right, host.bottom)
+      ..lineTo(host.left, host.bottom)
+      ..close();
   }
 }
 
@@ -487,7 +504,7 @@ class _DiamondBorder extends ShapeBorder {
 
   @override
   Path getOuterPath(Rect rect, { TextDirection textDirection }) {
-    return new Path()
+    return Path()
       ..moveTo(rect.left + rect.width / 2.0, rect.top)
       ..lineTo(rect.right, rect.top + rect.height / 2.0)
       ..lineTo(rect.left + rect.width  / 2.0, rect.bottom)

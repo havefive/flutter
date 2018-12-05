@@ -51,13 +51,13 @@ class Viewport extends MultiChildRenderObjectWidget {
   /// The [offset] argument must not be null.
   Viewport({
     Key key,
-    this.axisDirection: AxisDirection.down,
+    this.axisDirection = AxisDirection.down,
     this.crossAxisDirection,
-    this.anchor: 0.0,
+    this.anchor = 0.0,
     @required this.offset,
     this.center,
     this.cacheExtent,
-    List<Widget> slivers: const <Widget>[],
+    List<Widget> slivers = const <Widget>[],
   }) : assert(offset != null),
        assert(slivers != null),
        assert(center == null || slivers.where((Widget child) => child.key == center).length == 1),
@@ -134,7 +134,7 @@ class Viewport extends MultiChildRenderObjectWidget {
 
   @override
   RenderViewport createRenderObject(BuildContext context) {
-    return new RenderViewport(
+    return RenderViewport(
       axisDirection: axisDirection,
       crossAxisDirection: crossAxisDirection ?? Viewport.getDefaultCrossAxisDirection(context, axisDirection),
       anchor: anchor,
@@ -154,19 +154,19 @@ class Viewport extends MultiChildRenderObjectWidget {
   }
 
   @override
-  _ViewportElement createElement() => new _ViewportElement(this);
+  _ViewportElement createElement() => _ViewportElement(this);
 
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties.add(new EnumProperty<AxisDirection>('axisDirection', axisDirection));
-    properties.add(new EnumProperty<AxisDirection>('crossAxisDirection', crossAxisDirection, defaultValue: null));
-    properties.add(new DoubleProperty('anchor', anchor));
-    properties.add(new DiagnosticsProperty<ViewportOffset>('offset', offset));
+    properties.add(EnumProperty<AxisDirection>('axisDirection', axisDirection));
+    properties.add(EnumProperty<AxisDirection>('crossAxisDirection', crossAxisDirection, defaultValue: null));
+    properties.add(DoubleProperty('anchor', anchor));
+    properties.add(DiagnosticsProperty<ViewportOffset>('offset', offset));
     if (center != null) {
-      properties.add(new DiagnosticsProperty<Key>('center', center));
+      properties.add(DiagnosticsProperty<Key>('center', center));
     } else if (children.isNotEmpty && children.first.key != null) {
-      properties.add(new DiagnosticsProperty<Key>('center', children.first.key, tooltip: 'implicit'));
+      properties.add(DiagnosticsProperty<Key>('center', children.first.key, tooltip: 'implicit'));
     }
   }
 }
@@ -250,10 +250,10 @@ class ShrinkWrappingViewport extends MultiChildRenderObjectWidget {
   /// The [offset] argument must not be null.
   ShrinkWrappingViewport({
     Key key,
-    this.axisDirection: AxisDirection.down,
+    this.axisDirection = AxisDirection.down,
     this.crossAxisDirection,
     @required this.offset,
-    List<Widget> slivers: const <Widget>[],
+    List<Widget> slivers = const <Widget>[],
   }) : assert(offset != null),
        super(key: key, children: slivers);
 
@@ -287,7 +287,7 @@ class ShrinkWrappingViewport extends MultiChildRenderObjectWidget {
 
   @override
   RenderShrinkWrappingViewport createRenderObject(BuildContext context) {
-    return new RenderShrinkWrappingViewport(
+    return RenderShrinkWrappingViewport(
       axisDirection: axisDirection,
       crossAxisDirection: crossAxisDirection ?? Viewport.getDefaultCrossAxisDirection(context, axisDirection),
       offset: offset,
@@ -305,8 +305,8 @@ class ShrinkWrappingViewport extends MultiChildRenderObjectWidget {
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties.add(new EnumProperty<AxisDirection>('axisDirection', axisDirection));
-    properties.add(new EnumProperty<AxisDirection>('crossAxisDirection', crossAxisDirection, defaultValue: null));
-    properties.add(new DiagnosticsProperty<ViewportOffset>('offset', offset));
+    properties.add(EnumProperty<AxisDirection>('axisDirection', axisDirection));
+    properties.add(EnumProperty<AxisDirection>('crossAxisDirection', crossAxisDirection, defaultValue: null));
+    properties.add(DiagnosticsProperty<ViewportOffset>('offset', offset));
   }
 }

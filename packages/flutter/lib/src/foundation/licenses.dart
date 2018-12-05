@@ -5,7 +5,7 @@
 import 'dart:async';
 
 /// Signature for callbacks passed to [LicenseRegistry.addLicense].
-typedef Stream<LicenseEntry> LicenseEntryCollector();
+typedef LicenseEntryCollector = Stream<LicenseEntry> Function();
 
 /// A string that represents one paragraph in a [LicenseEntry].
 ///
@@ -63,14 +63,14 @@ enum _LicenseEntryWithLineBreaksParserState {
 /// unless they start with the same number of spaces as the previous line, in
 /// which case it's assumed they are a continuation of an indented paragraph.
 ///
-/// ## Sample code
+/// {@tool sample}
 ///
 /// For example, the BSD license in this format could be encoded as follows:
 ///
 /// ```dart
 /// void initMyLibrary() {
 ///   LicenseRegistry.addLicense(() async* {
-///     yield new LicenseEntryWithLineBreaks(<String>['my_library'], '''
+///     yield LicenseEntryWithLineBreaks(<String>['my_library'], '''
 /// Copyright 2016 The Sample Authors. All rights reserved.
 ///
 /// Redistribution and use in source and binary forms, with or without
@@ -101,6 +101,7 @@ enum _LicenseEntryWithLineBreaksParserState {
 ///   });
 /// }
 /// ```
+/// {@end-tool}
 ///
 /// This would result in a license with six [paragraphs], the third, fourth, and
 /// fifth being indented one level.
@@ -154,7 +155,7 @@ class LicenseEntryWithLineBreaks extends LicenseEntry {
     LicenseParagraph getParagraph() {
       assert(lines.isNotEmpty);
       assert(currentParagraphIndentation != null);
-      final LicenseParagraph result = new LicenseParagraph(lines.join(' '), currentParagraphIndentation);
+      final LicenseParagraph result = LicenseParagraph(lines.join(' '), currentParagraphIndentation);
       assert(result.text.trimLeft() == result.text);
       assert(result.text.isNotEmpty);
       lines.clear();

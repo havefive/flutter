@@ -169,7 +169,7 @@ abstract class RenderSliverFixedExtentBoxAdaptor extends RenderSliverMultiBoxAda
       if (!addInitialChild(index: firstIndex, layoutOffset: indexToLayoutOffset(itemExtent, firstIndex))) {
         // There are either no children, or we are past the end of all our children.
         final double max = computeMaxScrollOffset(constraints, itemExtent);
-        geometry = new SliverGeometry(
+        geometry = SliverGeometry(
           scrollExtent: max,
           maxPaintExtent: max,
         );
@@ -186,7 +186,7 @@ abstract class RenderSliverFixedExtentBoxAdaptor extends RenderSliverMultiBoxAda
         // Items before the previously first child are no longer present.
         // Reset the scroll offset to offset all items prior and up to the
         // missing item. Let parent re-layout everything.
-        geometry = new SliverGeometry(scrollOffsetCorrection: index * itemExtent);
+        geometry = SliverGeometry(scrollOffsetCorrection: index * itemExtent);
         return;
       }
       final SliverMultiBoxAdaptorParentData childParentData = child.parentData;
@@ -248,13 +248,16 @@ abstract class RenderSliverFixedExtentBoxAdaptor extends RenderSliverMultiBoxAda
       to: trailingScrollOffset,
     );
 
-    geometry = new SliverGeometry(
+    final double targetEndScrollOffsetForPaint = constraints.scrollOffset + constraints.remainingPaintExtent;
+    final int targetLastIndexForPaint = targetEndScrollOffsetForPaint.isFinite ?
+        getMaxChildIndexForScrollOffset(targetEndScrollOffsetForPaint, itemExtent) : null;
+    geometry = SliverGeometry(
       scrollExtent: estimatedMaxScrollOffset,
       paintExtent: paintExtent,
       cacheExtent: cacheExtent,
       maxPaintExtent: estimatedMaxScrollOffset,
       // Conservative to avoid flickering away the clip during scroll.
-      hasVisualOverflow: (targetLastIndex != null && lastIndex >= targetLastIndex)
+      hasVisualOverflow: (targetLastIndexForPaint != null && lastIndex >= targetLastIndexForPaint)
         || constraints.scrollOffset > 0.0,
     );
 

@@ -7,17 +7,17 @@ import 'package:flutter/widgets.dart';
 
 void main() {
   testWidgets('SliverFillRemaining control test', (WidgetTester tester) async {
-    final List<Widget> children = new List<Widget>.generate(20, (int i) {
-      return new Container(child: new Text('$i', textDirection: TextDirection.ltr));
+    final List<Widget> children = List<Widget>.generate(20, (int i) {
+      return Container(child: Text('$i', textDirection: TextDirection.ltr));
     });
 
     await tester.pumpWidget(
-      new Directionality(
+      Directionality(
         textDirection: TextDirection.ltr,
-        child: new CustomScrollView(
+        child: CustomScrollView(
           slivers: <Widget>[
-            new SliverFillViewport(
-              delegate: new SliverChildListDelegate(children, addAutomaticKeepAlives: false),
+            SliverFillViewport(
+              delegate: SliverChildListDelegate(children, addAutomaticKeepAlives: false, addSemanticIndexes: false),
             ),
           ],
         ),
@@ -82,7 +82,7 @@ void main() {
         ' │ │ constraints: BoxConstraints(w=800.0, h=600.0)\n'
         ' │ │ layer: OffsetLayer#00000\n'
         ' │ │ size: Size(800.0, 600.0)\n'
-        ' │ │ metrics: 75.0% useful (1 bad vs 3 good)\n'
+        ' │ │ metrics: 66.7% useful (1 bad vs 2 good)\n'
         ' │ │ diagnosis: insufficient data to draw conclusion (less than five\n'
         ' │ │   repaints)\n'
         ' │ │\n'
@@ -103,9 +103,9 @@ void main() {
         ' └─child with index 1: RenderRepaintBoundary#00000\n'
         '   │ parentData: index=1; layoutOffset=600.0\n'
         '   │ constraints: BoxConstraints(w=800.0, h=600.0)\n'
-        '   │ layer: OffsetLayer#00000\n'
+        '   │ layer: OffsetLayer#00000 DETACHED\n'
         '   │ size: Size(800.0, 600.0)\n'
-        '   │ metrics: 75.0% useful (1 bad vs 3 good)\n'
+        '   │ metrics: 50.0% useful (1 bad vs 1 good)\n'
         '   │ diagnosis: insufficient data to draw conclusion (less than five\n'
         '   │   repaints)\n'
         '   │\n'

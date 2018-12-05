@@ -4,17 +4,38 @@
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
+
+import '../rendering/mock_canvas.dart';
+import '../rendering/recording_canvas.dart';
+
+class FakeEditableTextState extends TextSelectionDelegate {
+  @override
+  TextEditingValue get textEditingValue { return const TextEditingValue(); }
+
+  @override
+  set textEditingValue(TextEditingValue value) {}
+
+  @override
+  void hideToolbar() {}
+
+  @override
+  void bringIntoView(TextPosition position) {}
+}
 
 void main() {
   test('editable intrinsics', () {
-    final RenderEditable editable = new RenderEditable(
+    final TextSelectionDelegate delegate = FakeEditableTextState();
+    final RenderEditable editable = RenderEditable(
       text: const TextSpan(
-        style: const TextStyle(height: 1.0, fontSize: 10.0, fontFamily: 'Ahem'),
+        style: TextStyle(height: 1.0, fontSize: 10.0, fontFamily: 'Ahem'),
         text: '12345',
       ),
       textAlign: TextAlign.start,
       textDirection: TextDirection.ltr,
-      offset: new ViewportOffset.zero(),
+      locale: const Locale('ja', 'JP'),
+      offset: ViewportOffset.zero(),
+      textSelectionDelegate: delegate,
     );
     expect(editable.getMinIntrinsicWidth(double.infinity), 50.0);
     expect(editable.getMaxIntrinsicWidth(double.infinity), 50.0);
@@ -33,6 +54,7 @@ void main() {
         ' │ maxLines: 1\n'
         ' │ selectionColor: null\n'
         ' │ textScaleFactor: 1.0\n'
+        ' │ locale: ja_JP\n'
         ' │ selection: null\n'
         ' │ offset: _FixedViewportOffset#00000(offset: 0.0)\n'
         ' ╘═╦══ text ═══\n'
@@ -44,6 +66,29 @@ void main() {
         '   ║   "12345"\n'
         '   ╚═══════════\n'
       ),
+    );
+  });
+
+  // Test that clipping will be used even when the text fits within the visible
+  // region if the start position of the text is offset (e.g. during scrolling
+  // animation).
+  test('correct clipping', () {
+    final TextSelectionDelegate delegate = FakeEditableTextState();
+    final RenderEditable editable = RenderEditable(
+      text: const TextSpan(
+        style: TextStyle(height: 1.0, fontSize: 10.0, fontFamily: 'Ahem'),
+        text: 'A',
+      ),
+      textAlign: TextAlign.start,
+      textDirection: TextDirection.ltr,
+      locale: const Locale('en', 'US'),
+      offset: ViewportOffset.fixed(10.0),
+      textSelectionDelegate: delegate,
+    );
+    editable.layout(BoxConstraints.loose(const Size(1000.0, 1000.0)));
+    expect(
+      (Canvas canvas) => editable.paint(TestRecordingPaintingContext(canvas), Offset.zero),
+      paints..clipRect(rect: Rect.fromLTRB(0.0, 0.0, 1000.0, 10.0))
     );
   });
 }

@@ -37,5 +37,18 @@
   "drawerLabel": "د نیویگیشن مینو",
   "popupMenuLabel": "د پاپ اپ مینو",
   "dialogLabel": "خبرې اترې",
-  "alertDialogLabel": "خبرتیا"
+  "alertDialogLabel": "خبرتیا",
+  "searchFieldLabel": "لټون",
+  "reorderItemToStart": "TBD",
+  "reorderItemToEnd": "TBD",
+  "reorderItemUp": "TBD",
+  "reorderItemDown": "TBD",
+  "reorderItemLeft": "TBD",
+  "reorderItemRight": "TBD",
+  "expandedIconTapHint": "TBD",
+  "collapsedIconTapHint": "TBD",
+  "remainingTextFieldCharacterCountZero": "TBD",
+  "remainingTextFieldCharacterCountOne": "TBD",
+  "remainingTextFieldCharacterCountOther": "TBD",
+  "refreshIndicatorSemanticLabel": "TBD"
 }

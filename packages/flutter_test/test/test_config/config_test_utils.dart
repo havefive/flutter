@@ -9,12 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 void testConfig(
   String description,
   String expectedStringValue, {
-  Map<Type, dynamic> otherExpectedValues: const <Type, dynamic>{int: isNull},
+  Map<Type, dynamic> otherExpectedValues = const <Type, dynamic>{int: isNull},
 }) {
   final String actualStringValue = Zone.current[String];
   final Map<Type, dynamic> otherActualValues = otherExpectedValues.map<Type, dynamic>(
     (Type key, dynamic value) {
-      return new MapEntry<Type, dynamic>(key, Zone.current[key]);
+      return MapEntry<Type, dynamic>(key, Zone.current[key]);
     },
   );
 

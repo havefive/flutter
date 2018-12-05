@@ -27,7 +27,7 @@
 /// with the following signature:
 ///
 /// ```dart
-/// void main(FutureOr<void> testMain());
+/// Future<void> main(FutureOr<void> testMain());
 /// ```
 ///
 /// The test framework will execute that method and pass it the `main()` method
@@ -46,6 +46,7 @@ library flutter_test;
 
 export 'dart:async' show Future;
 
+export 'src/accessibility.dart';
 export 'src/all_elements.dart';
 export 'src/binding.dart';
 export 'src/controller.dart';
@@ -53,9 +54,9 @@ export 'src/finders.dart';
 export 'src/goldens.dart';
 export 'src/matchers.dart';
 export 'src/nonconst.dart';
-export 'src/platform.dart';
 export 'src/stack_manipulation.dart';
 export 'src/test_async_utils.dart';
+export 'src/test_exception_reporter.dart';
 export 'src/test_pointer.dart';
 export 'src/test_text_input.dart';
 export 'src/test_vsync.dart';

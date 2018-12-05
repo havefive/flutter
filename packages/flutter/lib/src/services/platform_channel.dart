@@ -135,16 +135,18 @@ class MethodChannel {
   /// * a [MissingPluginException], if the method has not been implemented by a
   ///   platform plugin.
   ///
-  /// ## Sample code
-  ///
   /// The following code snippets demonstrate how to invoke platform methods
   /// in Dart using a MethodChannel and how to implement those methods in Java
-  /// (for Android) and Objective-C (for iOS). The code might be packaged up as
-  /// a musical plugin, see <https://flutter.io/developing-packages/>:
+  /// (for Android) and Objective-C (for iOS).
+  ///
+  /// {@tool sample}
+  ///
+  /// The code might be packaged up as a musical plugin, see
+  /// <https://flutter.io/developing-packages/>:
   ///
   /// ```dart
   /// class Music {
-  ///   static const MethodChannel _channel = const MethodChannel('music');
+  ///   static const MethodChannel _channel = MethodChannel('music');
   ///
   ///   static Future<bool> isLicensed() async {
   ///     // invokeMethod returns a Future<dynamic>, and we cannot pass that for
@@ -184,10 +186,15 @@ class MethodChannel {
   ///   final String artist;
   ///
   ///   static Song fromJson(dynamic json) {
-  ///     return new Song(json['id'], json['title'], json['artist']);
+  ///     return Song(json['id'], json['title'], json['artist']);
   ///   }
   /// }
   /// ```
+  /// {@end-tool}
+  ///
+  /// {@tool sample}
+  ///
+  /// Java (for Android):
   ///
   /// ```java
   /// // Assumes existence of an Android MusicApi.
@@ -200,7 +207,7 @@ class MethodChannel {
   ///         break;
   ///       case "getSongs":
   ///         final List<MusicApi.Track> tracks = MusicApi.getTracks();
-  ///         final List<Object> json = new ArrayList<>(tracks.size());
+  ///         final List<Object> json = ArrayList<>(tracks.size());
   ///         for (MusicApi.Track track : tracks) {
   ///           json.add(track.toJson()); // Map<String, Object> entries
   ///         }
@@ -223,8 +230,13 @@ class MethodChannel {
   ///   // Other methods elided.
   /// }
   /// ```
+  /// {@end-tool}
   ///
-  /// ```objective-c
+  /// {@tool sample}
+  ///
+  /// Objective-C (for iOS):
+  ///
+  /// ```objectivec
   /// @interface MusicPlugin : NSObject<FlutterPlugin>
   /// @end
   ///
@@ -259,6 +271,7 @@ class MethodChannel {
   /// // Other methods elided.
   /// @end
   /// ```
+  /// {@end-tool}
   ///
   /// See also:
   ///
@@ -272,10 +285,10 @@ class MethodChannel {
     assert(method != null);
     final dynamic result = await BinaryMessages.send(
       name,
-      codec.encodeMethodCall(new MethodCall(method, arguments)),
+      codec.encodeMethodCall(MethodCall(method, arguments)),
     );
     if (result == null)
-      throw new MissingPluginException('No implementation found for method $method on channel $name');
+      throw MissingPluginException('No implementation found for method $method on channel $name');
     return codec.decodeEnvelope(result);
   }
 
@@ -313,6 +326,11 @@ class MethodChannel {
   ///
   /// This is intended for testing. Method calls intercepted in this manner are
   /// not sent to platform plugins.
+  ///
+  /// The provided `handler` must return a `Future` that completes with the
+  /// return value of the call. The value will be encoded using
+  /// [MethodCodec.encodeSuccessEnvelope], to act as if platform plugin had
+  /// returned that value.
   void setMockMethodCallHandler(Future<dynamic> handler(MethodCall call)) {
     BinaryMessages.setMockMessageHandler(
       name,
@@ -400,9 +418,9 @@ class EventChannel {
   /// stream listener count changes from 0 to 1. Stream deactivation happens
   /// only when stream listener count changes from 1 to 0.
   Stream<dynamic> receiveBroadcastStream([dynamic arguments]) {
-    final MethodChannel methodChannel = new MethodChannel(name, codec);
+    final MethodChannel methodChannel = MethodChannel(name, codec);
     StreamController<dynamic> controller;
-    controller = new StreamController<dynamic>.broadcast(onListen: () async {
+    controller = StreamController<dynamic>.broadcast(onListen: () async {
       BinaryMessages.setMessageHandler(name, (ByteData reply) async {
         if (reply == null) {
           controller.close();
@@ -413,11 +431,12 @@ class EventChannel {
             controller.addError(e);
           }
         }
+        return null;
       });
       try {
         await methodChannel.invokeMethod('listen', arguments);
       } catch (exception, stack) {
-        FlutterError.reportError(new FlutterErrorDetails(
+        FlutterError.reportError(FlutterErrorDetails(
           exception: exception,
           stack: stack,
           library: 'services library',
@@ -429,7 +448,7 @@ class EventChannel {
       try {
         await methodChannel.invokeMethod('cancel', arguments);
       } catch (exception, stack) {
-        FlutterError.reportError(new FlutterErrorDetails(
+        FlutterError.reportError(FlutterErrorDetails(
           exception: exception,
           stack: stack,
           library: 'services library',
