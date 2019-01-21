@@ -595,7 +595,7 @@ abstract class StatelessWidget extends Widget {
   ///
   /// See also:
   ///
-  ///  * The discussion on performance considerations at [StatelessWidget].
+  ///  * [StatelessWidget], which contains the discussion on performance considerations.
   @protected
   Widget build(BuildContext context);
 }
@@ -1047,8 +1047,8 @@ abstract class State<T extends StatefulWidget> extends Diagnosticable {
   ///
   /// See also:
   ///
-  /// * [BindingBase.reassembleApplication].
-  /// * [Image], which uses this to reload images.
+  ///  * [BindingBase.reassembleApplication]
+  ///  * [Image], which uses this to reload images.
   @protected
   @mustCallSuper
   void reassemble() { }
@@ -1299,7 +1299,7 @@ abstract class State<T extends StatefulWidget> extends Diagnosticable {
   ///
   /// See also:
   ///
-  ///  * The discussion on performance considerations at [StatefulWidget].
+  ///  * [StatefulWidget], which contains the discussion on performance considerations.
   @protected
   Widget build(BuildContext context);
 
@@ -1520,7 +1520,7 @@ abstract class ParentDataWidget<T extends RenderObjectWidget> extends ProxyWidge
 ///   final Color color;
 ///
 ///   static FrogColor of(BuildContext context) {
-///     return context.inheritFromWidgetOfExactType(FrogColor);
+///     return context.inheritFromWidgetOfExactType(FrogColor) as FrogColor;
 ///   }
 ///
 ///   @override
@@ -1531,8 +1531,8 @@ abstract class ParentDataWidget<T extends RenderObjectWidget> extends ProxyWidge
 ///
 /// The convention is to provide a static method `of` on the [InheritedWidget]
 /// which does the call to [BuildContext.inheritFromWidgetOfExactType]. This
-/// allows the class to define its own fallback logic in the case of there not
-/// being a widget in scope. In the example above, the value returned will be
+/// allows the class to define its own fallback logic in case there isn't
+/// a widget in scope. In the example above, the value returned will be
 /// null in that case, but it could also have defaulted to a value.
 ///
 /// Sometimes, the `of` method returns the data rather than the inherited
@@ -2662,11 +2662,11 @@ abstract class Element extends DiagnosticableTree implements BuildContext {
   ///
   /// See also:
   ///
-  /// - [Offstage] widget that hides its children.
-  /// - [Finder] that skips offstage widgets by default.
-  /// - [RenderObject.visitChildrenForSemantics], in contrast to this method,
-  ///   designed specifically for excluding parts of the UI from the semantics
-  ///   tree.
+  ///  * [Offstage] widget that hides its children.
+  ///  * [Finder] that skips offstage widgets by default.
+  ///  * [RenderObject.visitChildrenForSemantics], in contrast to this method,
+  ///    designed specifically for excluding parts of the UI from the semantics
+  ///    tree.
   void debugVisitOnstageChildren(ElementVisitor visitor) => visitChildren(visitor);
 
   /// Wrapper around [visitChildren] for [BuildContext].
@@ -3924,7 +3924,7 @@ class StatefulElement extends ComponentElement {
           'the inherited widget is in a constructor or an initState() method, '
           'then the rebuilt dependent widget will not reflect the changes in the '
           'inherited widget.\n'
-          'Typically references to to inherited widgets should occur in widget build() methods. Alternatively, '
+          'Typically references to inherited widgets should occur in widget build() methods. Alternatively, '
           'initialization based on inherited widgets can be placed in the didChangeDependencies method, which '
           'is called after initState and whenever the dependencies change thereafter.'
         );

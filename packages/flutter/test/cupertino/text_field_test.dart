@@ -1098,4 +1098,122 @@ void main() {
       expect(find.byType(CupertinoButton), findsNWidgets(3));
     },
   );
+
+  testWidgets('force press selects word', (WidgetTester tester) async {
+      final TextEditingController controller = TextEditingController(
+        text: 'Atwater Peel Sherbrooke Bonaventure',
+      );
+      await tester.pumpWidget(
+        CupertinoApp(
+          home: Center(
+            child: CupertinoTextField(
+              controller: controller,
+            ),
+          ),
+        ),
+      );
+
+      final Offset textfieldStart = tester.getTopLeft(find.byType(CupertinoTextField));
+
+      const int pointerValue = 1;
+      final TestGesture gesture =
+      await tester.startGesture(textfieldStart + const Offset(150.0, 5.0));
+      await gesture.updateWithCustomEvent(PointerMoveEvent(pointer: pointerValue, position: textfieldStart + const Offset(150.0, 5.0), pressure: 0.5, pressureMin: 0, pressureMax: 1));
+      // We expect the force press to select a word at the given location.
+      expect(
+        controller.selection,
+        const TextSelection(baseOffset: 8, extentOffset: 12),
+      );
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(find.byType(CupertinoButton), findsNWidgets(3));
+    },
+  );
+
+  testWidgets(
+    'text field respects theme',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const CupertinoApp(
+          theme: CupertinoThemeData(
+            brightness: Brightness.dark,
+          ),
+          home: Center(
+            child: CupertinoTextField(),
+          ),
+        ),
+      );
+
+      final BoxDecoration decoration = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: find.byType(CupertinoTextField),
+          matching: find.byType(DecoratedBox)
+        ),
+      ).decoration;
+
+      expect(
+        decoration.border.bottom.color,
+        CupertinoColors.lightBackgroundGray, // Border color is the same regardless.
+      );
+
+      await tester.enterText(find.byType(CupertinoTextField), 'smoked meat');
+      await tester.pump();
+
+      expect(
+        tester.renderObject<RenderEditable>(
+          find.byElementPredicate((Element element) => element.renderObject is RenderEditable)
+        ).text.style.color,
+        CupertinoColors.white,
+      );
+    },
+  );
+
+  testWidgets('text field respects keyboardAppearance from theme', (WidgetTester tester) async {
+    final List<MethodCall> log = <MethodCall>[];
+    SystemChannels.textInput.setMockMethodCallHandler((MethodCall methodCall) async {
+      log.add(methodCall);
+    });
+
+    await tester.pumpWidget(
+      const CupertinoApp(
+        theme: CupertinoThemeData(
+          brightness: Brightness.dark,
+        ),
+        home: Center(
+          child: CupertinoTextField(),
+        ),
+      ),
+    );
+
+    await tester.showKeyboard(find.byType(EditableText));
+    final MethodCall setClient = log.first;
+    expect(setClient.method, 'TextInput.setClient');
+    expect(setClient.arguments.last['keyboardAppearance'], 'Brightness.dark');
+  });
+
+  testWidgets('text field can override keyboardAppearance from theme', (WidgetTester tester) async {
+    final List<MethodCall> log = <MethodCall>[];
+    SystemChannels.textInput.setMockMethodCallHandler((MethodCall methodCall) async {
+      log.add(methodCall);
+    });
+
+    await tester.pumpWidget(
+      const CupertinoApp(
+        theme: CupertinoThemeData(
+          brightness: Brightness.dark,
+        ),
+        home: Center(
+          child: CupertinoTextField(
+            keyboardAppearance: Brightness.light,
+          ),
+        ),
+      ),
+    );
+
+    await tester.showKeyboard(find.byType(EditableText));
+    final MethodCall setClient = log.first;
+    expect(setClient.method, 'TextInput.setClient');
+    expect(setClient.arguments.last['keyboardAppearance'], 'Brightness.light');
+  });
 }

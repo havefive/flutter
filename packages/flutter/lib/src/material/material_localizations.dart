@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import 'reorderable_list.dart';
 import 'text_theme.dart';
 import 'time.dart';
 import 'typography.dart';
@@ -38,7 +39,7 @@ import 'typography.dart';
 //
 // 6. If you're adding a String for the sake of Flutter, not for an app-specific
 //    version of this interface, you are making a breaking API change. See
-//    https://flutter.io/design-principles/#handling-breaking-changes.
+//    https://github.com/flutter/flutter/wiki/Tree-hygiene#handling-breaking-changes.
 
 /// Defines the localized resource values used by the Material widgets.
 ///
@@ -277,27 +278,27 @@ abstract class MaterialLocalizations {
   /// shows the list of accounts.
   String get showAccountsLabel;
 
-  /// The semantics label used for [ReorderableList] to reorder an item in the
+  /// The semantics label used for [ReorderableListView] to reorder an item in the
   /// list to the start of the list.
   String get reorderItemToStart;
 
-  /// The semantics label used for [ReorderableList] to reorder an item in the
+  /// The semantics label used for [ReorderableListView] to reorder an item in the
   /// list to the end of the list.
   String get reorderItemToEnd;
 
-  /// The semantics label used for [ReorderableList] to reorder an item in the
+  /// The semantics label used for [ReorderableListView] to reorder an item in the
   /// list one space up the list.
   String get reorderItemUp;
 
-  /// The semantics label used for [ReorderableList] to reorder an item in the
+  /// The semantics label used for [ReorderableListView] to reorder an item in the
   /// list one space down the list.
   String get reorderItemDown;
 
-  /// The semantics label used for [ReorderableList] to reorder an item in the
+  /// The semantics label used for [ReorderableListView] to reorder an item in the
   /// list one space left in the list.
   String get reorderItemLeft;
 
-  /// The semantics label used for [ReorderableList] to reorder an item in the
+  /// The semantics label used for [ReorderableListView] to reorder an item in the
   /// list one space right in the list.
   String get reorderItemRight;
 
