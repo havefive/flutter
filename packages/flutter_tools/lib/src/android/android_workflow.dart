@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:convert';
 
 import '../base/common.dart';
 import '../base/context.dart';
@@ -14,9 +13,13 @@ import '../base/process_manager.dart';
 import '../base/user_messages.dart';
 import '../base/utils.dart';
 import '../base/version.dart';
+import '../convert.dart';
 import '../doctor.dart';
 import '../globals.dart';
 import 'android_sdk.dart';
+
+const int kAndroidSdkMinVersion = 28;
+final Version kAndroidSdkBuildToolsMinVersion = Version(28, 0, 3);
 
 AndroidWorkflow get androidWorkflow => context[AndroidWorkflow];
 AndroidValidator get androidValidator => context[AndroidValidator];
@@ -48,7 +51,7 @@ class AndroidWorkflow implements Workflow {
 }
 
 class AndroidValidator extends DoctorValidator {
-  AndroidValidator(): super('Android toolchain - develop for Android devices',);
+  AndroidValidator() : super('Android toolchain - develop for Android devices',);
 
   @override
   String get slowWarning => '${_task ?? 'This'} is taking a long time...';
@@ -102,6 +105,11 @@ class AndroidValidator extends DoctorValidator {
       return ValidationResult(ValidationType.missing, messages);
     }
 
+    if (androidSdk.licensesAvailable && !androidSdk.platformToolsAvailable) {
+      messages.add(ValidationMessage.hint(userMessages.androidSdkLicenseOnly(kAndroidHome)));
+      return ValidationResult(ValidationType.partial, messages);
+    }
+
     messages.add(ValidationMessage(userMessages.androidSdkLocation(androidSdk.directory)));
 
     messages.add(ValidationMessage(androidSdk.ndk == null
@@ -110,11 +118,19 @@ class AndroidValidator extends DoctorValidator {
 
     String sdkVersionText;
     if (androidSdk.latestVersion != null) {
+      if (androidSdk.latestVersion.sdkLevel < 28 || androidSdk.latestVersion.buildToolsVersion < kAndroidSdkBuildToolsMinVersion) {
+        messages.add(ValidationMessage.error(
+          userMessages.androidSdkBuildToolsOutdated(androidSdk.sdkManagerPath, kAndroidSdkMinVersion, kAndroidSdkBuildToolsMinVersion.toString())),
+        );
+        return ValidationResult(ValidationType.missing, messages);
+      }
       sdkVersionText = userMessages.androidStatusInfo(androidSdk.latestVersion.buildToolsVersionName);
 
       messages.add(ValidationMessage(userMessages.androidSdkPlatformToolsVersion(
         androidSdk.latestVersion.platformName,
         androidSdk.latestVersion.buildToolsVersionName)));
+    } else {
+      messages.add(ValidationMessage.error(userMessages.androidMissingSdkInstructions(kAndroidHome)));
     }
 
     if (platform.environment.containsKey(kAndroidHome)) {
@@ -156,7 +172,7 @@ class AndroidValidator extends DoctorValidator {
 }
 
 class AndroidLicenseValidator extends DoctorValidator {
-  AndroidLicenseValidator(): super('Android license subvalidator',);
+  AndroidLicenseValidator() : super('Android license subvalidator',);
 
   @override
   String get slowWarning => 'Checking Android licenses is taking an unexpectedly long time...';
@@ -238,20 +254,24 @@ class AndroidLicenseValidator extends DoctorValidator {
       }
     }
 
-    _ensureCanRunSdkManager();
+    if (!_canRunSdkManager()) {
+      return LicensesAccepted.unknown;
+    }
 
     final Process process = await runCommand(
       <String>[androidSdk.sdkManagerPath, '--licenses'],
       environment: androidSdk.sdkManagerEnv,
     );
     process.stdin.write('n\n');
+    // We expect logcat streams to occasionally contain invalid utf-8,
+    // see: https://github.com/flutter/flutter/pull/8864.
     final Future<void> output = process.stdout
-      .transform<String>(const Utf8Decoder(allowMalformed: true))
+      .transform<String>(const Utf8Decoder(reportErrors: false))
       .transform<String>(const LineSplitter())
       .listen(_handleLine)
       .asFuture<void>(null);
     final Future<void> errors = process.stderr
-      .transform<String>(const Utf8Decoder(allowMalformed: true))
+      .transform<String>(const Utf8Decoder(reportErrors: false))
       .transform<String>(const LineSplitter())
       .listen(_handleLine)
       .asFuture<void>(null);
@@ -266,12 +286,14 @@ class AndroidLicenseValidator extends DoctorValidator {
       return false;
     }
 
-    _ensureCanRunSdkManager();
+    if (!_canRunSdkManager()) {
+      throwToolExit(userMessages.androidMissingSdkManager(androidSdk.sdkManagerPath));
+    }
 
     final Version sdkManagerVersion = Version.parse(androidSdk.sdkManagerVersion);
     if (sdkManagerVersion == null || sdkManagerVersion.major < 26) {
       // SDK manager is found, but needs to be updated.
-      throwToolExit(userMessages.androidSdkOutdated(androidSdk.sdkManagerPath));
+      throwToolExit(userMessages.androidSdkManagerOutdated(androidSdk.sdkManagerPath));
     }
 
     final Process process = await runCommand(
@@ -281,7 +303,7 @@ class AndroidLicenseValidator extends DoctorValidator {
 
     // The real stdin will never finish streaming. Pipe until the child process
     // finishes.
-    process.stdin.addStream(stdin); // ignore: unawaited_futures
+    unawaited(process.stdin.addStream(stdin));
     // Wait for stdout and stderr to be fully processed, because process.exitCode
     // may complete first.
     await waitGroup<void>(<Future<void>>[
@@ -293,10 +315,9 @@ class AndroidLicenseValidator extends DoctorValidator {
     return exitCode == 0;
   }
 
-  static void _ensureCanRunSdkManager() {
+  static bool _canRunSdkManager() {
     assert(androidSdk != null);
     final String sdkManagerPath = androidSdk.sdkManagerPath;
-    if (!processManager.canRun(sdkManagerPath))
-      throwToolExit(userMessages.androidMissingSdkManager(sdkManagerPath));
+    return processManager.canRun(sdkManagerPath);
   }
 }

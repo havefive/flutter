@@ -46,13 +46,11 @@ class GenSnapshot {
 
   Future<int> run({
     @required SnapshotType snapshotType,
-    @required String packagesPath,
     IOSArch iosArch,
     Iterable<String> additionalArgs = const <String>[],
   }) {
     final List<String> args = <String>[
       '--causal_async_stacks',
-      '--packages=$packagesPath',
     ]..addAll(additionalArgs);
 
     final String snapshotterPath = getSnapshotterPath(snapshotType);
@@ -193,7 +191,6 @@ class AOTSnapshotter {
     final SnapshotType snapshotType = SnapshotType(platform, buildMode);
     final int genSnapshotExitCode = await genSnapshot.run(
       snapshotType: snapshotType,
-      packagesPath: packageMap.packagesPath,
       additionalArgs: genSnapshotArgs,
       iosArch: iosArch,
     );
@@ -351,7 +348,7 @@ class JITSnapshotter {
     @required String outputPath,
     @required String compilationTraceFilePath,
     @required bool createPatch,
-    int buildNumber,
+    String buildNumber,
     String baselineDir,
     List<String> extraGenSnapshotOptions = const <String>[],
   }) async {
@@ -436,6 +433,15 @@ class JITSnapshotter {
             printError('Error: Detected engine changes unsupported by dynamic patching.');
             return 1;
           }
+        }
+      }
+
+      {
+        final ArchiveFile af = baselinePkg.findFile(
+            fs.path.join('assets/flutter_assets/vm_snapshot_instr'));
+        if (af != null) {
+          printError('Error: Invalid baseline package ${baselineApk.path}.');
+          return 1;
         }
       }
     }
@@ -528,7 +534,6 @@ class JITSnapshotter {
     final SnapshotType snapshotType = SnapshotType(platform, buildMode);
     final int genSnapshotExitCode = await genSnapshot.run(
       snapshotType: snapshotType,
-      packagesPath: packagesPath,
       additionalArgs: genSnapshotArgs,
     );
     if (genSnapshotExitCode != 0) {

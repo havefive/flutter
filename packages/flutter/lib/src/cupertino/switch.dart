@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 
 import 'colors.dart';
 import 'thumb_painter.dart';
@@ -59,7 +60,7 @@ class CupertinoSwitch extends StatefulWidget {
     @required this.value,
     @required this.onChanged,
     this.activeColor,
-    this.dragStartBehavior = DragStartBehavior.down,
+    this.dragStartBehavior = DragStartBehavior.start,
   }) : assert(dragStartBehavior != null),
        super(key: key);
 
@@ -96,7 +97,6 @@ class CupertinoSwitch extends StatefulWidget {
   /// [CupertinoTheme] in accordance to native iOS behavior.
   final Color activeColor;
 
-  // TODO(jslavitz): Set the DragStartBehavior default to be start across all widgets.
   /// {@template flutter.cupertino.switch.dragStartBehavior}
   /// Determines the way that drag start behavior is handled.
   ///
@@ -109,7 +109,7 @@ class CupertinoSwitch extends StatefulWidget {
   /// animation smoother and setting it to [DragStartBehavior.down] will make
   /// drag behavior feel slightly more reactive.
   ///
-  /// By default, the drag start behavior is [DragStartBehavior.down].
+  /// By default, the drag start behavior is [DragStartBehavior.start].
   ///
   /// See also:
   ///
@@ -148,7 +148,7 @@ class _CupertinoSwitchRenderObjectWidget extends LeafRenderObjectWidget {
     this.activeColor,
     this.onChanged,
     this.vsync,
-    this.dragStartBehavior = DragStartBehavior.down,
+    this.dragStartBehavior = DragStartBehavior.start,
   }) : super(key: key);
 
   final bool value;
@@ -201,7 +201,7 @@ class _RenderCupertinoSwitch extends RenderConstrainedBox {
     ValueChanged<bool> onChanged,
     @required TextDirection textDirection,
     @required TickerProvider vsync,
-    DragStartBehavior dragStartBehavior = DragStartBehavior.down,
+    DragStartBehavior dragStartBehavior = DragStartBehavior.start,
   }) : assert(value != null),
        assert(activeColor != null),
        assert(vsync != null),
@@ -366,8 +366,10 @@ class _RenderCupertinoSwitch extends RenderConstrainedBox {
   }
 
   void _handleTap() {
-    if (isInteractive)
+    if (isInteractive) {
       onChanged(!_value);
+      _emitVibration();
+    }
   }
 
   void _handleTapUp(TapUpDetails details) {
@@ -381,8 +383,10 @@ class _RenderCupertinoSwitch extends RenderConstrainedBox {
   }
 
   void _handleDragStart(DragStartDetails details) {
-    if (isInteractive)
+    if (isInteractive) {
       _reactionController.forward();
+      _emitVibration();
+    }
   }
 
   void _handleDragUpdate(DragUpdateDetails details) {
@@ -408,6 +412,17 @@ class _RenderCupertinoSwitch extends RenderConstrainedBox {
     else
       _positionController.reverse();
     _reactionController.reverse();
+  }
+
+  void _emitVibration(){
+    switch(defaultTargetPlatform) {
+      case TargetPlatform.iOS:
+        HapticFeedback.lightImpact();
+        break;
+      case TargetPlatform.fuchsia:
+      case TargetPlatform.android:
+        break;
+    }
   }
 
   @override

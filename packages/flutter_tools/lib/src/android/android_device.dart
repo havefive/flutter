@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:meta/meta.dart';
 
@@ -18,6 +17,7 @@ import '../base/logger.dart';
 import '../base/process.dart';
 import '../base/process_manager.dart';
 import '../build_info.dart';
+import '../convert.dart';
 import '../device.dart';
 import '../globals.dart';
 import '../project.dart';
@@ -172,7 +172,7 @@ class AndroidDevice extends Device {
       if (majorVersion == 1 && minorVersion > 0) {
         return true;
       }
-      if (majorVersion == 1 && minorVersion == 0 && patchVersion >= 32) {
+      if (majorVersion == 1 && minorVersion == 0 && patchVersion >= 39) {
         return true;
       }
       return false;
@@ -190,7 +190,7 @@ class AndroidDevice extends Device {
       final RunResult adbVersion = await runCheckedAsync(<String>[getAdbPath(androidSdk), 'version']);
       if (_isValidAdbVersion(adbVersion.stdout))
         return true;
-      printError('The ADB at "${getAdbPath(androidSdk)}" is too old; please install version 1.0.32 or later.');
+      printError('The ADB at "${getAdbPath(androidSdk)}" is too old; please install version 1.0.39 or later.');
     } catch (error, trace) {
       printError('Error running ADB: $error', stackTrace: trace);
     }
@@ -372,7 +372,7 @@ class AndroidDevice extends Device {
     if (buildInfo.targetPlatform == null && devicePlatform == TargetPlatform.android_arm64)
       buildInfo = buildInfo.withTargetPlatform(TargetPlatform.android_arm64);
 
-    if (!prebuiltApplication) {
+    if (!prebuiltApplication || androidSdk.licensesAvailable && androidSdk.latestVersion == null) {
       printTrace('Building APK');
       final FlutterProject project = await FlutterProject.current();
       await buildApk(
@@ -428,9 +428,13 @@ class AndroidDevice extends Device {
       cmd.addAll(<String>['--ez', 'skia-deterministic-rendering', 'true']);
     if (debuggingOptions.traceSkia)
       cmd.addAll(<String>['--ez', 'trace-skia', 'true']);
+    if (debuggingOptions.traceSystrace)
+      cmd.addAll(<String>['--ez', 'trace-systrace', 'true']);
     if (debuggingOptions.debuggingEnabled) {
-      if (debuggingOptions.buildInfo.isDebug)
+      if (debuggingOptions.buildInfo.isDebug) {
         cmd.addAll(<String>['--ez', 'enable-checked-mode', 'true']);
+        cmd.addAll(<String>['--ez', 'verify-entry-points', 'true']);
+      }
       if (debuggingOptions.startPaused)
         cmd.addAll(<String>['--ez', 'start-paused', 'true']);
       if (debuggingOptions.useTestFonts)
@@ -486,7 +490,7 @@ class AndroidDevice extends Device {
   }
 
   @override
-  DeviceLogReader getLogReader({ApplicationPackage app}) {
+  DeviceLogReader getLogReader({ ApplicationPackage app }) {
     // The Android log reader isn't app-specific.
     _logReader ??= _AdbLogReader(this);
     return _logReader;
@@ -572,7 +576,8 @@ final RegExp _kDeviceRegex = RegExp(r'^(\S+)\s+(\S+)(.*)');
 /// of devices and possible device issue diagnostics. Either argument can be null,
 /// in which case information for that parameter won't be populated.
 @visibleForTesting
-void parseADBDeviceOutput(String text, {
+void parseADBDeviceOutput(
+  String text, {
   List<AndroidDevice> devices,
   List<String> diagnostics
 }) {
@@ -676,12 +681,14 @@ class _AdbLogReader extends DeviceLogReader {
     final List<String> args = <String>['shell', '-x', 'logcat', '-v', 'time'];
     final String lastTimestamp = device.lastLogcatTimestamp;
     if (lastTimestamp != null)
-        _timeOrigin = _adbTimestampToDateTime(lastTimestamp);
+      _timeOrigin = _adbTimestampToDateTime(lastTimestamp);
     else
-        _timeOrigin = null;
+      _timeOrigin = null;
     runCommand(device.adbCommandForDevice(args)).then<void>((Process process) {
       _process = process;
-      const Utf8Decoder decoder = Utf8Decoder(allowMalformed: true);
+      // We expect logcat streams to occasionally contain invalid utf-8,
+      // see: https://github.com/flutter/flutter/pull/8864.
+      const Utf8Decoder decoder = Utf8Decoder(reportErrors: false);
       _process.stdout.transform<String>(decoder).transform<String>(const LineSplitter()).listen(_onLine);
       _process.stderr.transform<String>(decoder).transform<String>(const LineSplitter()).listen(_onLine);
       _process.exitCode.whenComplete(() {
@@ -843,7 +850,7 @@ class _AndroidDevicePortForwarder extends DevicePortForwarder {
   }
 
   @override
-  Future<int> forward(int devicePort, {int hostPort}) async {
+  Future<int> forward(int devicePort, { int hostPort }) async {
     hostPort ??= 0;
     final RunResult process = await runCheckedAsync(device.adbCommandForDevice(
       <String>['forward', 'tcp:$hostPort', 'tcp:$devicePort']

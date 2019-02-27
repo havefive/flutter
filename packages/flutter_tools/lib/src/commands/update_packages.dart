@@ -22,7 +22,7 @@ import '../runner/flutter_command.dart';
 /// package version in cases when upgrading to the latest breaks Flutter.
 const Map<String, String> _kManuallyPinnedDependencies = <String, String>{
   // Add pinned packages here.
-  'flutter_gallery_assets': '0.1.6', // See //examples/flutter_gallery/pubspec.yaml
+  'flutter_gallery_assets': '0.1.8', // See //examples/flutter_gallery/pubspec.yaml
 };
 
 class UpdatePackagesCommand extends FlutterCommand {
@@ -390,7 +390,7 @@ class _DependencyLink {
 /// "dependency_overrides" sections, as well as the "name" and "version" fields
 /// in the pubspec header bucketed into [header]. The others are all bucketed
 /// into [other].
-enum Section { header, dependencies, devDependencies, dependencyOverrides, other }
+enum Section { header, dependencies, devDependencies, dependencyOverrides, builders, other }
 
 /// The various kinds of dependencies we know and care about.
 enum DependencyKind {
@@ -504,6 +504,11 @@ class PubspecYaml {
             seenDev = true;
           }
           result.add(header);
+        } else if (section == Section.builders) {
+          // Do nothing.
+          // This line isn't a section header, and we're not in a section we care about.
+          // We just stick the line into the output unmodified.
+          result.add(PubspecLine(line));
         } else if (section == Section.other) {
           if (line.contains(kDependencyChecksum)) {
             // This is the pubspec checksum. After computing it, we remove it from the output data
@@ -640,7 +645,6 @@ class PubspecYaml {
         // place to insert our transitive dependencies.
         if (section == Section.dependencies)
           endOfDirectDependencies = output.length;
-          endOfDevDependencies = output.length;
         if (section == Section.devDependencies)
           endOfDevDependencies = output.length;
         section = data.section; // track which section we're now in.
@@ -879,6 +883,8 @@ class PubspecHeader extends PubspecLine {
         return PubspecHeader(line, Section.devDependencies);
       case 'dependency_overrides':
         return PubspecHeader(line, Section.dependencyOverrides);
+      case 'builders':
+        return PubspecHeader(line, Section.builders);
       case 'name':
       case 'version':
         return PubspecHeader(line, Section.header, name: sectionName, value: value);
@@ -904,7 +910,8 @@ class PubspecDependency extends PubspecLine {
     DependencyKind kind,
     this.version,
     this.sourcePath,
-  }) : _kind = kind, super(line);
+  }) : _kind = kind,
+       super(line);
 
   static PubspecDependency parse(String line, { @required String filename }) {
     // We recognize any line that:
@@ -1180,7 +1187,8 @@ class PubDependencyTree {
 
   /// The transitive closure of all the dependencies for the given package,
   /// excluding any listen in `seen`.
-  Iterable<String> getTransitiveDependenciesFor(String package, {
+  Iterable<String> getTransitiveDependenciesFor(
+    String package, {
     @required Set<String> seen,
     @required Set<String> exclude,
   }) sync* {

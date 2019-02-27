@@ -81,7 +81,7 @@ class Scrollable extends StatefulWidget {
     @required this.viewportBuilder,
     this.excludeFromSemantics = false,
     this.semanticChildCount,
-    this.dragStartBehavior = DragStartBehavior.down,
+    this.dragStartBehavior = DragStartBehavior.start,
   }) : assert(axisDirection != null),
        assert(dragStartBehavior != null),
        assert(viewportBuilder != null),
@@ -194,7 +194,7 @@ class Scrollable extends StatefulWidget {
   /// animation smoother and setting it to [DragStartBehavior.down] will make
   /// drag behavior feel slightly more reactive.
   ///
-  /// By default, the drag start behavior is [DragStartBehavior.down].
+  /// By default, the drag start behavior is [DragStartBehavior.start].
   ///
   /// See also:
   ///
@@ -231,7 +231,8 @@ class Scrollable extends StatefulWidget {
 
   /// Scrolls the scrollables that enclose the given context so as to make the
   /// given context visible.
-  static Future<void> ensureVisible(BuildContext context, {
+  static Future<void> ensureVisible(
+    BuildContext context, {
     double alignment = 0.0,
     Duration duration = Duration.zero,
     Curve curve = Curves.ease,
@@ -595,7 +596,8 @@ class _ScrollSemantics extends SingleChildRenderObjectWidget {
     @required this.allowImplicitScrolling,
     @required this.semanticChildCount,
     Widget child
-  }) : assert(position != null), super(key: key, child: child);
+  }) : assert(position != null),
+       super(key: key, child: child);
 
   final ScrollPosition position;
   final bool allowImplicitScrolling;
@@ -628,7 +630,8 @@ class _RenderScrollSemantics extends RenderProxyBox {
   }) : _position = position,
        _allowImplicitScrolling = allowImplicitScrolling,
        _semanticChildCount = semanticChildCount,
-       assert(position != null), super(child) {
+       assert(position != null),
+       super(child) {
     position.addListener(markNeedsSemanticsUpdate);
   }
 
