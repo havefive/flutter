@@ -341,7 +341,7 @@ class ScrollDragController implements Drag {
               // Ease into the motion when the threshold is initially broken
               // to avoid a visible jump.
               motionStartDistanceThreshold / 3.0,
-              offset.abs()
+              offset.abs(),
             ) * offset.sign;
           }
         } else {
@@ -457,7 +457,7 @@ class DragScrollActivity extends ScrollActivity {
     ScrollEndNotification(
       metrics: metrics,
       context: context,
-      dragDetails: lastDetails is DragEndDetails ? lastDetails : null
+      dragDetails: lastDetails is DragEndDetails ? lastDetails : null,
     ).dispatch(context);
   }
 
@@ -507,7 +507,7 @@ class BallisticScrollActivity extends ScrollActivity {
     TickerProvider vsync,
   ) : super(delegate) {
     _controller = AnimationController.unbounded(
-      debugLabel: '$runtimeType',
+      debugLabel: kDebugMode ? '$runtimeType' : null,
       vsync: vsync,
     )
       ..addListener(_tick)

@@ -68,9 +68,13 @@ class _ToolbarContainerLayout extends SingleChildLayoutDelegate {
 /// menu").
 ///
 /// App bars are typically used in the [Scaffold.appBar] property, which places
-/// the app bar as a fixed-height widget at the top of the screen. For a
-/// scrollable app bar, see [SliverAppBar], which embeds an [AppBar] in a sliver
-/// for use in a [CustomScrollView].
+/// the app bar as a fixed-height widget at the top of the screen. For a scrollable
+/// app bar, see [SliverAppBar], which embeds an [AppBar] in a sliver for use in
+/// a [CustomScrollView].
+///
+/// When not used as [Scaffold.appBar], or when wrapped in a [Hero], place the app
+/// bar in a [MediaQuery] to take care of the padding around the content of the
+/// app bar if needed, as the padding will not be handled by [Scaffold].
 ///
 /// The AppBar displays the toolbar widgets, [leading], [title], and [actions],
 /// above the [bottom] (if any). The [bottom] is usually used for a [TabBar]. If
@@ -256,7 +260,7 @@ class AppBar extends StatefulWidget implements PreferredSizeWidget {
   /// {@end-tool}
   final List<Widget> actions;
 
-  /// This widget is stacked behind the toolbar and the tabbar. It's height will
+  /// This widget is stacked behind the toolbar and the tab bar. It's height will
   /// be the same as the app bar's overall height.
   ///
   /// A flexible space isn't actually flexible unless the [AppBar]'s container
@@ -332,7 +336,7 @@ class AppBar extends StatefulWidget implements PreferredSizeWidget {
 
   /// Whether this app bar is being displayed at the top of the screen.
   ///
-  /// If true, the appbar's toolbar elements and [bottom] widget will be
+  /// If true, the app bar's toolbar elements and [bottom] widget will be
   /// padded on top by the height of the system status bar. The layout
   /// of the [flexibleSpace] is not affected by the [primary] property.
   final bool primary;
@@ -611,7 +615,7 @@ class _FloatingAppBar extends StatefulWidget {
 }
 
 // A wrapper for the widget created by _SliverAppBarDelegate that starts and
-/// stops the floating appbar's snap-into-view or snap-out-of-view animation.
+// stops the floating app bar's snap-into-view or snap-out-of-view animation.
 class _FloatingAppBarState extends State<_FloatingAppBar> {
   ScrollPosition _position;
 
@@ -800,6 +804,8 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 /// common actions with [IconButton]s which are optionally followed by a
 /// [PopupMenuButton] for less common operations.
 ///
+/// {@youtube 560 315 https://www.youtube.com/watch?v=R9C5KMJKluE}
+///
 /// Sliver app bars are typically used as the first child of a
 /// [CustomScrollView], which lets the app bar integrate with the scroll view so
 /// that it can vary in height according to the scroll offset or float above the
@@ -962,7 +968,7 @@ class SliverAppBar extends StatefulWidget {
   /// {@end-tool}
   final List<Widget> actions;
 
-  /// This widget is stacked behind the toolbar and the tabbar. It's height will
+  /// This widget is stacked behind the toolbar and the tab bar. It's height will
   /// be the same as the app bar's overall height.
   ///
   /// Typically a [FlexibleSpaceBar]. See [FlexibleSpaceBar] for details.

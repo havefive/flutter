@@ -91,7 +91,7 @@ abstract class AnimatedWidget extends StatefulWidget {
   /// The [listenable] argument is required.
   const AnimatedWidget({
     Key key,
-    @required this.listenable
+    @required this.listenable,
   }) : assert(listenable != null),
        super(key: key);
 
@@ -431,7 +431,7 @@ class SizeTransition extends AnimatedWidget {
         heightFactor: axis == Axis.vertical ? math.max(sizeFactor.value, 0.0) : null,
         widthFactor: axis == Axis.horizontal ? math.max(sizeFactor.value, 0.0) : null,
         child: child,
-      )
+      ),
     );
   }
 }
@@ -440,6 +440,8 @@ class SizeTransition extends AnimatedWidget {
 ///
 /// For a widget that automatically animates between the sizes of two children,
 /// fading between them, see [AnimatedCrossFade].
+///
+/// {@youtube 560 315 https://www.youtube.com/watch?v=rLwWVbv3xDQ}
 ///
 /// Here's an illustration of the [FadeTransition] widget, with it's [opacity]
 /// animated by a [CurvedAnimation] set to [Curves.fastOutSlowIn]:
@@ -811,6 +813,8 @@ class DefaultTextStyleTransition extends AnimatedWidget {
 ///
 /// For simple cases without additional state, consider using
 /// [AnimatedWidget].
+///
+/// {@youtube 560 315 https://www.youtube.com/watch?v=N-RiyZlv8v8}
 ///
 /// ## Performance optimizations
 ///

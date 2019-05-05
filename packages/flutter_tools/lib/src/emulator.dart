@@ -13,7 +13,7 @@ import 'base/process_manager.dart';
 import 'globals.dart';
 import 'ios/ios_emulators.dart';
 
-EmulatorManager get emulatorManager => context[EmulatorManager];
+EmulatorManager get emulatorManager => context.get<EmulatorManager>();
 
 /// A class to get all available emulators.
 class EmulatorManager {
@@ -115,7 +115,7 @@ class EmulatorManager {
       'avd',
       '-n', name,
       '-k', sdkId,
-      '-d', device
+      '-d', device,
     ];
     final ProcessResult runResult = processManager.runSync(args,
         environment: androidSdk?.sdkManagerEnv);
@@ -136,7 +136,7 @@ class EmulatorManager {
       getAvdManagerPath(androidSdk),
       'list',
       'device',
-      '-c'
+      '-c',
     ];
     final ProcessResult runResult = processManager.runSync(args,
         environment: androidSdk?.sdkManagerEnv);

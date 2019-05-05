@@ -4,7 +4,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' as io show IOSink;
+import 'dart:io' as io show IOSink, ProcessSignal;
 
 import 'package:flutter_tools/src/android/android_device.dart';
 import 'package:flutter_tools/src/android/android_sdk.dart' show AndroidSdk;
@@ -31,7 +31,7 @@ class MockApplicationPackageStore extends ApplicationPackageStore {
       id: 'io.flutter.android.mock',
       file: fs.file('/mock/path/to/android/SkyShell.apk'),
       versionCode: 1,
-      launchActivity: 'io.flutter.android.mock.MockActivity'
+      launchActivity: 'io.flutter.android.mock.MockActivity',
     ),
     iOS: BuildableIOSApp(MockIosProject())
   );
@@ -194,6 +194,38 @@ class MockProcess extends Mock implements Process {
 
   @override
   final Stream<List<int>> stderr;
+}
+
+/// A fake process implemenation which can be provided all necessary values.
+class FakeProcess implements Process {
+  FakeProcess({
+    this.pid = 1,
+    Future<int> exitCode,
+    Stream<List<int>> stdin,
+    this.stdout = const Stream<List<int>>.empty(),
+    this.stderr = const Stream<List<int>>.empty(),
+  }) : exitCode = exitCode ?? Future<int>.value(0),
+       stdin = stdin ?? MemoryIOSink();
+
+  @override
+  final int pid;
+
+  @override
+  final Future<int> exitCode;
+
+  @override
+  final io.IOSink stdin;
+
+  @override
+  final Stream<List<int>> stdout;
+
+  @override
+  final Stream<List<int>> stderr;
+
+  @override
+  bool kill([io.ProcessSignal signal = io.ProcessSignal.sigterm]) {
+    return true;
+  }
 }
 
 /// A process that prompts the user to proceed, then asynchronously writes
@@ -379,6 +411,9 @@ class MockAndroidDevice extends Mock implements AndroidDevice {
 
   @override
   bool isSupported() => true;
+
+  @override
+  bool isSupportedForProject(FlutterProject flutterProject) => true;
 }
 
 class MockIOSDevice extends Mock implements IOSDevice {
@@ -387,6 +422,9 @@ class MockIOSDevice extends Mock implements IOSDevice {
 
   @override
   bool isSupported() => true;
+
+  @override
+  bool isSupportedForProject(FlutterProject flutterProject) => true;
 }
 
 class MockIOSSimulator extends Mock implements IOSSimulator {
@@ -395,6 +433,9 @@ class MockIOSSimulator extends Mock implements IOSSimulator {
 
   @override
   bool isSupported() => true;
+
+  @override
+  bool isSupportedForProject(FlutterProject flutterProject) => true;
 }
 
 class MockDeviceLogReader extends DeviceLogReader {
@@ -460,26 +501,20 @@ class MockDevFSOperations extends BasicMock implements DevFSOperations {
     messages.add(message);
     devicePathToContent[deviceUri] = content;
   }
-
-  @override
-  Future<dynamic> deleteFile(String fsName, Uri deviceUri) async {
-    messages.add('deleteFile $fsName $deviceUri');
-    devicePathToContent.remove(deviceUri);
-  }
 }
 
 class MockResidentCompiler extends BasicMock implements ResidentCompiler {
   @override
-  void accept() {}
+  void accept() { }
 
   @override
   Future<CompilerOutput> reject() async { return null; }
 
   @override
-  void reset() {}
+  void reset() { }
 
   @override
-  Future<dynamic> shutdown() async {}
+  Future<dynamic> shutdown() async { }
 
   @override
   Future<CompilerOutput> compileExpression(
@@ -488,14 +523,14 @@ class MockResidentCompiler extends BasicMock implements ResidentCompiler {
     List<String> typeDefinitions,
     String libraryUri,
     String klass,
-    bool isStatic
+    bool isStatic,
   ) async {
     return null;
   }
   @override
-  Future<CompilerOutput> recompile(String mainPath, List<String> invalidatedFiles, { String outputPath, String packagesFilePath }) async {
+  Future<CompilerOutput> recompile(String mainPath, List<Uri> invalidatedFiles, { String outputPath, String packagesFilePath }) async {
     fs.file(outputPath).createSync(recursive: true);
     fs.file(outputPath).writeAsStringSync('compiled_kernel_output');
-    return CompilerOutput(outputPath, 0);
+    return CompilerOutput(outputPath, 0, <Uri>[]);
   }
 }

@@ -195,8 +195,8 @@ void main() {
       () {
         return const LinearGradient(
           begin: AlignmentDirectional.topStart,
-          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ]
-        ).createShader(Rect.fromLTWH(0.0, 0.0, 100.0, 100.0));
+          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ],
+        ).createShader(const Rect.fromLTWH(0.0, 0.0, 100.0, 100.0));
       },
       throwsAssertionError,
     );
@@ -204,8 +204,8 @@ void main() {
       () {
         return const LinearGradient(
           begin: AlignmentDirectional.topStart,
-          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ]
-        ).createShader(Rect.fromLTWH(0.0, 0.0, 100.0, 100.0), textDirection: TextDirection.rtl);
+          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ],
+        ).createShader(const Rect.fromLTWH(0.0, 0.0, 100.0, 100.0), textDirection: TextDirection.rtl);
       },
       returnsNormally,
     );
@@ -213,8 +213,8 @@ void main() {
       () {
         return const LinearGradient(
           begin: AlignmentDirectional.topStart,
-          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ]
-        ).createShader(Rect.fromLTWH(0.0, 0.0, 100.0, 100.0), textDirection: TextDirection.ltr);
+          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ],
+        ).createShader(const Rect.fromLTWH(0.0, 0.0, 100.0, 100.0), textDirection: TextDirection.ltr);
       },
       returnsNormally,
     );
@@ -222,8 +222,8 @@ void main() {
       () {
         return const LinearGradient(
           begin: Alignment.topLeft,
-          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ]
-        ).createShader(Rect.fromLTWH(0.0, 0.0, 100.0, 100.0));
+          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ],
+        ).createShader(const Rect.fromLTWH(0.0, 0.0, 100.0, 100.0));
       },
       returnsNormally,
     );
@@ -234,8 +234,8 @@ void main() {
       () {
         return const RadialGradient(
           center: AlignmentDirectional.topStart,
-          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ]
-        ).createShader(Rect.fromLTWH(0.0, 0.0, 100.0, 100.0));
+          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ],
+        ).createShader(const Rect.fromLTWH(0.0, 0.0, 100.0, 100.0));
       },
       throwsAssertionError,
     );
@@ -244,8 +244,8 @@ void main() {
       () {
         return const RadialGradient(
           center: AlignmentDirectional.topStart,
-          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ]
-        ).createShader(Rect.fromLTWH(0.0, 0.0, 100.0, 100.0), textDirection: TextDirection.rtl);
+          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ],
+        ).createShader(const Rect.fromLTWH(0.0, 0.0, 100.0, 100.0), textDirection: TextDirection.rtl);
       },
       returnsNormally,
     );
@@ -253,8 +253,8 @@ void main() {
       () {
         return const RadialGradient(
           center: AlignmentDirectional.topStart,
-          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ]
-        ).createShader(Rect.fromLTWH(0.0, 0.0, 100.0, 100.0), textDirection: TextDirection.ltr);
+          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ],
+        ).createShader(const Rect.fromLTWH(0.0, 0.0, 100.0, 100.0), textDirection: TextDirection.ltr);
       },
       returnsNormally,
     );
@@ -262,8 +262,8 @@ void main() {
       () {
         return const RadialGradient(
           center: Alignment.topLeft,
-          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ]
-        ).createShader(Rect.fromLTWH(0.0, 0.0, 100.0, 100.0));
+          colors: <Color>[ Color(0xFFFFFFFF), Color(0xFFFFFFFF) ],
+        ).createShader(const Rect.fromLTWH(0.0, 0.0, 100.0, 100.0));
       },
       returnsNormally,
     );
@@ -343,7 +343,7 @@ void main() {
       stops: <double>[
         0.0,
         0.5,
-        1.0
+        1.0,
       ],
     ));
   });
@@ -759,7 +759,7 @@ void main() {
       ],
       stops: <double>[0.0, 1.0],
     );
-    final Rect rect = Rect.fromLTWH(1.0, 2.0, 3.0, 4.0);
+    const Rect rect = Rect.fromLTWH(1.0, 2.0, 3.0, 4.0);
     expect(test1a.createShader(rect), isNotNull);
     expect(test1b.createShader(rect), isNotNull);
     expect(() { test2a.createShader(rect); }, throwsArgumentError);

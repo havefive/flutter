@@ -24,10 +24,10 @@ import 'vmservice_record_replay.dart';
 
 /// Override `WebSocketConnector` in [context] to use a different constructor
 /// for [WebSocket]s (used by tests).
-typedef WebSocketConnector = Future<io.WebSocket> Function(String url);
+typedef WebSocketConnector = Future<io.WebSocket> Function(String url, {io.CompressionOptions compression});
 
 /// A function that opens a two-way communication channel to the specified [uri].
-typedef _OpenChannel = Future<StreamChannel<String>> Function(Uri uri);
+typedef _OpenChannel = Future<StreamChannel<String>> Function(Uri uri, {io.CompressionOptions compression});
 
 _OpenChannel _openChannel = _defaultOpenChannel;
 
@@ -62,7 +62,7 @@ typedef CompileExpression = Future<String> Function(
 
 const String _kRecordingType = 'vmservice';
 
-Future<StreamChannel<String>> _defaultOpenChannel(Uri uri) async {
+Future<StreamChannel<String>> _defaultOpenChannel(Uri uri, {io.CompressionOptions compression = io.CompressionOptions.compressionDefault}) async {
   Duration delay = const Duration(milliseconds: 100);
   int attempts = 0;
   io.WebSocket socket;
@@ -82,11 +82,11 @@ Future<StreamChannel<String>> _defaultOpenChannel(Uri uri) async {
       delay *= 2;
   }
 
-  final WebSocketConnector constructor = context[WebSocketConnector] ?? io.WebSocket.connect;
+  final WebSocketConnector constructor = context.get<WebSocketConnector>() ?? io.WebSocket.connect;
   while (socket == null) {
     attempts += 1;
     try {
-      socket = await constructor(uri.toString());
+      socket = await constructor(uri.toString(), compression: compression);
     } on io.WebSocketException catch (e) {
       await handleError(e);
     } on io.SocketException catch (e) {
@@ -206,7 +206,7 @@ class VMService {
 
       _peer.sendNotification('_registerService', <String, String>{
         'service': 'compileExpression',
-        'alias': 'Flutter Tools'
+        'alias': 'Flutter Tools',
       });
     }
   }
@@ -220,7 +220,7 @@ class VMService {
   /// `"vmservice"` subdirectory.
   static void enableRecordingConnection(String location) {
     final Directory dir = getRecordingSink(location, _kRecordingType);
-    _openChannel = (Uri uri) async {
+    _openChannel = (Uri uri, {io.CompressionOptions compression}) async {
       final StreamChannel<String> delegate = await _defaultOpenChannel(uri);
       return RecordingVMServiceChannel(delegate, dir);
     };
@@ -233,7 +233,12 @@ class VMService {
   /// passed to [enableRecordingConnection]), or a [ToolExit] will be thrown.
   static void enableReplayConnection(String location) {
     final Directory dir = getReplaySource(location, _kRecordingType);
-    _openChannel = (Uri uri) async => ReplayVMServiceChannel(dir);
+    _openChannel = (Uri uri, {io.CompressionOptions compression}) async => ReplayVMServiceChannel(dir);
+  }
+
+  static void _unhandledError(dynamic error, dynamic stack) {
+    logger.printTrace('Error in internal implementation of JSON RPC.\n$error\n$stack');
+    assert(false);
   }
 
   /// Connect to a Dart VM Service at [httpUri].
@@ -249,10 +254,11 @@ class VMService {
     ReloadSources reloadSources,
     Restart restart,
     CompileExpression compileExpression,
+    io.CompressionOptions compression = io.CompressionOptions.compressionDefault,
   }) async {
     final Uri wsUri = httpUri.replace(scheme: 'ws', path: fs.path.join(httpUri.path, 'ws'));
-    final StreamChannel<String> channel = await _openChannel(wsUri);
-    final rpc.Peer peer = rpc.Peer.withoutJson(jsonDocument.bind(channel));
+    final StreamChannel<String> channel = await _openChannel(wsUri, compression: compression);
+    final rpc.Peer peer = rpc.Peer.withoutJson(jsonDocument.bind(channel), onUnhandledError: _unhandledError);
     final VMService service = VMService(peer, httpUri, wsUri, reloadSources, restart, compileExpression);
     // This call is to ensure we are able to establish a connection instead of
     // keeping on trucking and failing farther down the process.
@@ -272,7 +278,7 @@ class VMService {
   final Map<String, StreamController<ServiceEvent>> _eventControllers =
       <String, StreamController<ServiceEvent>>{};
 
-  final Set<String> _listeningFor = Set<String>();
+  final Set<String> _listeningFor = <String>{};
 
   /// Whether our connection to the VM service has been closed;
   bool get isClosed => _peer.isClosed;
@@ -352,7 +358,7 @@ class VMService {
   Future<void> _streamListen(String streamId) async {
     if (!_listeningFor.contains(streamId)) {
       _listeningFor.add(streamId);
-      await _sendRequest('streamListen', <String, dynamic>{ 'streamId': streamId });
+      await _sendRequest('streamListen', <String, dynamic>{'streamId': streamId});
     }
   }
 
@@ -424,8 +430,10 @@ abstract class ServiceObject {
   /// Factory constructor given a [ServiceObjectOwner] and a service map,
   /// upgrade the map into a proper [ServiceObject]. This function always
   /// returns a new instance and does not interact with caches.
-  factory ServiceObject._fromMap(ServiceObjectOwner owner,
-                                 Map<String, dynamic> map) {
+  factory ServiceObject._fromMap(
+    ServiceObjectOwner owner,
+    Map<String, dynamic> map,
+  ) {
     if (map == null)
       return null;
 
@@ -749,7 +757,7 @@ class VM extends ServiceObjectOwner {
 
   void _removeDeadIsolates(List<Isolate> newIsolates) {
     // Build a set of new isolates.
-    final Set<String> newIsolateSet = Set<String>();
+    final Set<String> newIsolateSet = <String>{};
     for (Isolate iso in newIsolates)
       newIsolateSet.add(iso.id);
 
@@ -873,7 +881,7 @@ class VM extends ServiceObjectOwner {
 
   /// Create a new development file system on the device.
   Future<Map<String, dynamic>> createDevFS(String fsName) {
-    return invokeRpcRaw('_createDevFS', params: <String, dynamic> { 'fsName': fsName });
+    return invokeRpcRaw('_createDevFS', params: <String, dynamic>{'fsName': fsName});
   }
 
   /// List the development file system son the device.
@@ -885,7 +893,7 @@ class VM extends ServiceObjectOwner {
   Future<Map<String, dynamic>> writeDevFSFile(
     String fsName, {
     @required String path,
-    @required List<int> fileContents
+    @required List<int> fileContents,
   }) {
     assert(path != null);
     assert(fileContents != null);
@@ -913,12 +921,12 @@ class VM extends ServiceObjectOwner {
 
   /// The complete list of a file system.
   Future<List<String>> listDevFSFiles(String fsName) async {
-    return (await invokeRpcRaw('_listDevFSFiles', params: <String, dynamic>{ 'fsName': fsName }))['files'];
+    return (await invokeRpcRaw('_listDevFSFiles', params: <String, dynamic>{'fsName': fsName}))['files'];
   }
 
   /// Delete an existing file system.
   Future<Map<String, dynamic>> deleteDevFS(String fsName) {
-    return invokeRpcRaw('_deleteDevFS', params: <String, dynamic>{ 'fsName': fsName });
+    return invokeRpcRaw('_deleteDevFS', params: <String, dynamic>{'fsName': fsName});
   }
 
   Future<ServiceMap> runInView(
@@ -928,11 +936,11 @@ class VM extends ServiceObjectOwner {
     Uri assetsDirectory,
   ) {
     return invokeRpc<ServiceMap>('_flutter.runInView',
-      params: <String, dynamic> {
+      params: <String, dynamic>{
         'viewId': viewId,
         'mainScript': main.toString(),
         'packagesFile': packages.toString(),
-        'assetDirectory': assetsDirectory.toString()
+        'assetDirectory': assetsDirectory.toString(),
     });
   }
 
@@ -1109,7 +1117,7 @@ class Isolate extends ServiceObjectOwner {
     // Inject the 'isolateId' parameter.
     if (params == null) {
       params = <String, dynamic>{
-        'isolateId': id
+        'isolateId': id,
       };
     } else {
       params['isolateId'] = id;
@@ -1154,7 +1162,7 @@ class Isolate extends ServiceObjectOwner {
   }) async {
     try {
       final Map<String, dynamic> arguments = <String, dynamic>{
-        'pause': pause
+        'pause': pause,
       };
       if (rootLibUri != null) {
         arguments['rootLibUri'] = rootLibUri.toString();
@@ -1273,7 +1281,7 @@ class Isolate extends ServiceObjectOwner {
     if (state != null && state.containsKey('enabled') && state['enabled'] is String) {
       state = await invokeFlutterExtensionRpcRaw(
         'ext.flutter.$name',
-        params: <String, dynamic>{ 'enabled': state['enabled'] == 'true' ? 'false' : 'true' },
+        params: <String, dynamic>{'enabled': state['enabled'] == 'true' ? 'false' : 'true'},
       );
     }
     return state;
@@ -1281,14 +1289,18 @@ class Isolate extends ServiceObjectOwner {
 
   Future<Map<String, dynamic>> flutterToggleDebugPaintSizeEnabled() => _flutterToggle('debugPaint');
 
+  Future<Map<String, dynamic>> flutterToggleDebugCheckElevationsEnabled() => _flutterToggle('debugCheckElevationsEnabled');
+
   Future<Map<String, dynamic>> flutterTogglePerformanceOverlayOverride() => _flutterToggle('showPerformanceOverlay');
 
   Future<Map<String, dynamic>> flutterToggleWidgetInspector() => _flutterToggle('inspector.show');
 
+  Future<Map<String, dynamic>> flutterToggleProfileWidgetBuilds() => _flutterToggle('profileWidgetBuilds');
+
   Future<Map<String, dynamic>> flutterDebugAllowBanner(bool show) {
     return invokeFlutterExtensionRpcRaw(
       'ext.flutter.debugAllowBanner',
-      params: <String, dynamic>{ 'enabled': show ? 'true' : 'false' },
+      params: <String, dynamic>{'enabled': show ? 'true' : 'false'},
     );
   }
 
@@ -1311,7 +1323,7 @@ class Isolate extends ServiceObjectOwner {
       'ext.flutter.evict',
       params: <String, dynamic>{
         'value': assetPath,
-      }
+      },
     );
   }
 
@@ -1331,7 +1343,7 @@ class Isolate extends ServiceObjectOwner {
   Future<String> flutterPlatformOverride([ String platform ]) async {
     final Map<String, dynamic> result = await invokeFlutterExtensionRpcRaw(
       'ext.flutter.platformOverride',
-      params: platform != null ? <String, dynamic>{ 'value': platform } : <String, String>{},
+      params: platform != null ? <String, dynamic>{'value': platform} : <String, String>{},
     );
     if (result != null && result['value'] is String)
       return result['value'];
@@ -1428,14 +1440,14 @@ class FlutterView extends ServiceObject {
     final Completer<void> completer = Completer<void>();
     final StreamSubscription<ServiceEvent> subscription =
       (await owner.vm.vmService.onIsolateEvent).listen((ServiceEvent event) {
-      // TODO(johnmccutchan): Listen to the debug stream and catch initial
-      // launch errors.
-      if (event.kind == ServiceEvent.kIsolateRunnable) {
-        printTrace('Isolate is runnable.');
-        if (!completer.isCompleted)
-          completer.complete();
-      }
-    });
+        // TODO(johnmccutchan): Listen to the debug stream and catch initial
+        // launch errors.
+        if (event.kind == ServiceEvent.kIsolateRunnable) {
+          printTrace('Isolate is runnable.');
+          if (!completer.isCompleted)
+            completer.complete();
+        }
+      });
     await owner.vm.runInView(viewId,
                              entryUri,
                              packagesUri,
@@ -1451,7 +1463,7 @@ class FlutterView extends ServiceObject {
         params: <String, dynamic>{
           'isolateId': _uiIsolate.id,
           'viewId': id,
-          'assetDirectory': assetsDirectory.toFilePath(windows: false)
+          'assetDirectory': assetsDirectory.toFilePath(windows: false),
         });
   }
 

@@ -19,11 +19,12 @@ import 'ios/devices.dart';
 import 'ios/simulators.dart';
 import 'linux/linux_device.dart';
 import 'macos/macos_device.dart';
+import 'project.dart';
 import 'tester/flutter_tester.dart';
 import 'web/web_device.dart';
 import 'windows/windows_device.dart';
 
-DeviceManager get deviceManager => context[DeviceManager];
+DeviceManager get deviceManager => context.get<DeviceManager>();
 
 /// A class to get all available devices.
 class DeviceManager {
@@ -235,6 +236,9 @@ abstract class Device {
     }
   }
 
+  /// Whether the device is supported for the current project directory.
+  bool isSupportedForProject(FlutterProject flutterProject);
+
   /// Check if a version of the given app is already installed
   Future<bool> isAppInstalled(ApplicationPackage app);
 
@@ -286,7 +290,6 @@ abstract class Device {
     DebuggingOptions debuggingOptions,
     Map<String, dynamic> platformArgs,
     bool prebuiltApplication = false,
-    bool applicationNeedsRebuild = false,
     bool usesTerminalUi = true,
     bool ipv6 = false,
   });
@@ -365,13 +368,17 @@ abstract class Device {
 }
 
 class DebuggingOptions {
-  DebuggingOptions.enabled(this.buildInfo, {
+  DebuggingOptions.enabled(
+    this.buildInfo, {
     this.startPaused = false,
+    this.disableServiceAuthCodes = false,
     this.enableSoftwareRendering = false,
     this.skiaDeterministicRendering = false,
     this.traceSkia = false,
     this.traceSystrace = false,
+    this.dumpSkpOnShaderCompilation = false,
     this.useTestFonts = false,
+    this.verboseSystemLogs = false,
     this.observatoryPort,
    }) : debuggingEnabled = true;
 
@@ -379,21 +386,27 @@ class DebuggingOptions {
     : debuggingEnabled = false,
       useTestFonts = false,
       startPaused = false,
+      disableServiceAuthCodes = false,
       enableSoftwareRendering = false,
       skiaDeterministicRendering = false,
       traceSkia = false,
       traceSystrace = false,
+      dumpSkpOnShaderCompilation = false,
+      verboseSystemLogs = false,
       observatoryPort = null;
 
   final bool debuggingEnabled;
 
   final BuildInfo buildInfo;
   final bool startPaused;
+  final bool disableServiceAuthCodes;
   final bool enableSoftwareRendering;
   final bool skiaDeterministicRendering;
   final bool traceSkia;
   final bool traceSystrace;
+  final bool dumpSkpOnShaderCompilation;
   final bool useTestFonts;
+  final bool verboseSystemLogs;
   final int observatoryPort;
 
   bool get hasObservatoryPort => observatoryPort != null;
@@ -492,5 +505,5 @@ class NoOpDevicePortForwarder implements DevicePortForwarder {
   List<ForwardedPort> get forwardedPorts => <ForwardedPort>[];
 
   @override
-  Future<void> unforward(ForwardedPort forwardedPort) async {}
+  Future<void> unforward(ForwardedPort forwardedPort) async { }
 }

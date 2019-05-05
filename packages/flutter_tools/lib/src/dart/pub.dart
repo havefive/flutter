@@ -41,6 +41,7 @@ class PubContext {
   static final PubContext interactive = PubContext._(<String>['interactive']);
   static final PubContext pubGet = PubContext._(<String>['get']);
   static final PubContext pubUpgrade = PubContext._(<String>['upgrade']);
+  static final PubContext pubForward = PubContext._(<String>['forward']);
   static final PubContext runTest = PubContext._(<String>['run_test']);
 
   static final PubContext flutterTests = PubContext._(<String>['flutter_tests']);
@@ -75,14 +76,15 @@ Future<void> pubGet({
   bool skipIfAbsent = false,
   bool upgrade = false,
   bool offline = false,
-  bool checkLastModified = true
+  bool checkLastModified = true,
+  bool skipPubspecYamlCheck = false,
 }) async {
   directory ??= fs.currentDirectory.path;
 
   final File pubSpecYaml = fs.file(fs.path.join(directory, 'pubspec.yaml'));
   final File dotPackages = fs.file(fs.path.join(directory, '.packages'));
 
-  if (!pubSpecYaml.existsSync()) {
+  if (!skipPubspecYamlCheck && !pubSpecYaml.existsSync()) {
     if (!skipIfAbsent)
       throwToolExit('$directory: no pubspec.yaml found');
     return;
@@ -92,7 +94,7 @@ Future<void> pubGet({
     final String command = upgrade ? 'upgrade' : 'get';
     final Status status = logger.startProgress(
       'Running "flutter packages $command" in ${fs.path.basename(directory)}...',
-      timeout: kSlowOperation,
+      timeout: timeoutConfiguration.slowOperation,
     );
     final List<String> args = <String>['--verbosity=warning'];
     if (FlutterCommand.current != null && FlutterCommand.current.globalResults['verbose'])

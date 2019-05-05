@@ -29,30 +29,30 @@ void main() {
     double refreshIndicatorExtent,
   ) => mockHelper.builder(context, refreshState, pulledExtent, refreshTriggerPullDistance, refreshIndicatorExtent);
 
-  final Function onRefresh = () => mockHelper.refreshTask();
+  Future<void> onRefresh() => mockHelper.refreshTask();
 
   setUp(() {
     mockHelper = MockHelper();
     refreshCompleter = Completer<void>.sync();
     refreshIndicator = Container();
 
-    when(mockHelper.builder(
-            any, any, any, any, any))
-        .thenAnswer((Invocation i) {
-      final double pulledExtent = i.positionalArguments[2];
-      final double refreshTriggerPullDistance = i.positionalArguments[3];
-      final double refreshIndicatorExtent = i.positionalArguments[4];
-      if (pulledExtent < 0.0) {
-        throw TestFailure('The pulledExtent should never be less than 0.0');
-      }
-      if (refreshTriggerPullDistance < 0.0) {
-        throw TestFailure('The refreshTriggerPullDistance should never be less than 0.0');
-      }
-      if (refreshIndicatorExtent < 0.0) {
-        throw TestFailure('The refreshIndicatorExtent should never be less than 0.0');
-      }
-      return refreshIndicator;
-    });
+    when(mockHelper.builder(any, any, any, any, any))
+      .thenAnswer((Invocation i) {
+        final double pulledExtent = i.positionalArguments[2];
+        final double refreshTriggerPullDistance = i.positionalArguments[3];
+        final double refreshIndicatorExtent = i.positionalArguments[4];
+        if (pulledExtent < 0.0) {
+          throw TestFailure('The pulledExtent should never be less than 0.0');
+        }
+        if (refreshTriggerPullDistance < 0.0) {
+          throw TestFailure('The refreshTriggerPullDistance should never be less than 0.0');
+        }
+        if (refreshIndicatorExtent < 0.0) {
+          throw TestFailure('The refreshIndicatorExtent should never be less than 0.0');
+        }
+        return refreshIndicator;
+      });
+
     when(mockHelper.refreshTask()).thenAnswer((_) => refreshCompleter.future);
   });
 
@@ -374,6 +374,95 @@ void main() {
       },
     );
 
+    testWidgets(
+      'refreshing task keeps the sliver expanded forever until completes with error',
+      (WidgetTester tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        final FlutterError error = FlutterError('Oops');
+        double errorCount = 0;
+
+        runZoned(() async {
+          refreshCompleter = Completer<void>.sync();
+
+          await tester.pumpWidget(
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: CustomScrollView(
+                slivers: <Widget>[
+                  CupertinoSliverRefreshControl(
+                    builder: builder,
+                    onRefresh: onRefresh,
+                  ),
+                  buildAListOfStuff(),
+                ],
+              ),
+            ),
+          );
+
+          await tester.drag(find.text('0'), const Offset(0.0, 150.0), touchSlopY: 0);
+          await tester.pump();
+          // Let it start snapping back.
+          await tester.pump(const Duration(milliseconds: 50));
+
+          verifyInOrder(<void>[
+            mockHelper.builder(
+              any,
+              RefreshIndicatorMode.armed,
+              150.0,
+              100.0, // Default value.
+              60.0, // Default value.
+            ),
+            mockHelper.refreshTask(),
+            mockHelper.builder(
+              any,
+              RefreshIndicatorMode.armed,
+              argThat(moreOrLessEquals(127.10396988577114)),
+              100.0, // Default value.
+              60.0, // Default value.
+            ),
+          ]);
+
+          // Reaches refresh state and sliver's at 60.0 in height after a while.
+          await tester.pump(const Duration(seconds: 1));
+          verify(mockHelper.builder(
+            any,
+            RefreshIndicatorMode.refresh,
+            60.0,
+            100.0, // Default value.
+            60.0, // Default value.
+          ));
+
+          // Stays in that state forever until future completes.
+          await tester.pump(const Duration(seconds: 1000));
+          verifyNoMoreInteractions(mockHelper);
+          expect(
+            tester.getTopLeft(find.widgetWithText(Container, '0')),
+            const Offset(0.0, 60.0),
+          );
+
+          refreshCompleter.completeError(error);
+          await tester.pump();
+
+          verify(mockHelper.builder(
+            any,
+            RefreshIndicatorMode.done,
+            60.0,
+            100.0, // Default value.
+            60.0, // Default value.
+          ));
+          verifyNoMoreInteractions(mockHelper);
+        },
+        onError: (dynamic e) {
+          expect(e, error);
+          expect(errorCount, 0);
+          errorCount++;
+        }
+      );
+
+      debugDefaultTargetPlatformOverride = null;
+      },
+    );
+
     testWidgets('expanded refreshing sliver scrolls normally', (WidgetTester tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
 
@@ -408,7 +497,7 @@ void main() {
       // Given a box constraint of 150, the Center will occupy all that height.
       expect(
         tester.getRect(find.widgetWithText(Center, '-1')),
-        Rect.fromLTRB(0.0, 0.0, 800.0, 150.0),
+        const Rect.fromLTRB(0.0, 0.0, 800.0, 150.0),
       );
 
       await tester.drag(find.text('0'), const Offset(0.0, -300.0), touchSlopY: 0);
@@ -444,11 +533,11 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
       expect(
         tester.getRect(find.widgetWithText(Center, '-1')),
-        Rect.fromLTRB(0.0, 0.0, 800.0, 60.0),
+        const Rect.fromLTRB(0.0, 0.0, 800.0, 60.0),
       );
       expect(
         tester.getRect(find.widgetWithText(Center, '0')),
-        Rect.fromLTRB(0.0, 60.0, 800.0, 260.0),
+        const Rect.fromLTRB(0.0, 60.0, 800.0, 260.0),
       );
 
       debugDefaultTargetPlatformOverride = null;
@@ -485,7 +574,7 @@ void main() {
       ));
       expect(
         tester.getRect(find.widgetWithText(Center, '-1')),
-        Rect.fromLTRB(0.0, 0.0, 800.0, 150.0),
+        const Rect.fromLTRB(0.0, 0.0, 800.0, 150.0),
       );
       verify(mockHelper.refreshTask());
 
@@ -502,11 +591,11 @@ void main() {
       ));
       expect(
         tester.getRect(find.widgetWithText(Center, '-1')),
-        Rect.fromLTRB(0.0, 0.0, 800.0, 60.0),
+        const Rect.fromLTRB(0.0, 0.0, 800.0, 60.0),
       );
       expect(
         tester.getRect(find.widgetWithText(Center, '0')),
-        Rect.fromLTRB(0.0, 60.0, 800.0, 260.0),
+        const Rect.fromLTRB(0.0, 60.0, 800.0, 260.0),
       );
 
       refreshCompleter.complete(null);
@@ -523,7 +612,7 @@ void main() {
       expect(find.text('-1'), findsNothing);
       expect(
         tester.getRect(find.widgetWithText(Center, '0')),
-        Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
+        const Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
       );
 
       debugDefaultTargetPlatformOverride = null;
@@ -560,7 +649,7 @@ void main() {
       ));
       expect(
         tester.getRect(find.widgetWithText(Center, '-1')),
-        Rect.fromLTRB(0.0, 0.0, 800.0, 150.0),
+        const Rect.fromLTRB(0.0, 0.0, 800.0, 150.0),
       );
       verify(mockHelper.refreshTask());
 
@@ -577,11 +666,11 @@ void main() {
       ));
       expect(
         tester.getRect(find.widgetWithText(Center, '-1')),
-        Rect.fromLTRB(0.0, 0.0, 800.0, 60.0),
+        const Rect.fromLTRB(0.0, 0.0, 800.0, 60.0),
       );
       expect(
         tester.getRect(find.widgetWithText(Center, '0')),
-        Rect.fromLTRB(0.0, 60.0, 800.0, 260.0),
+        const Rect.fromLTRB(0.0, 60.0, 800.0, 260.0),
       );
 
       refreshCompleter.complete(null);
@@ -688,7 +777,7 @@ void main() {
         expect(find.text('-1'), findsNothing);
         expect(
           tester.getRect(find.widgetWithText(Center, '0')),
-          Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
+          const Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
         );
 
         // Start another drag. It's now in drag mode.
@@ -746,7 +835,7 @@ void main() {
         ));
         expect(
           tester.getRect(find.widgetWithText(Center, '0')),
-          Rect.fromLTRB(0.0, 150.0, 800.0, 350.0),
+          const Rect.fromLTRB(0.0, 150.0, 800.0, 350.0),
         );
 
         await gesture.up();
@@ -755,7 +844,7 @@ void main() {
         expect(find.text('-1'), findsNothing);
         expect(
           tester.getRect(find.widgetWithText(Center, '0')),
-          Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
+          const Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
         );
 
         debugDefaultTargetPlatformOverride = null;
@@ -847,7 +936,7 @@ void main() {
         expect(find.text('-1'), findsNothing);
         expect(
           tester.getRect(find.widgetWithText(Center, '0')),
-          Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
+          const Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
         );
 
         debugDefaultTargetPlatformOverride = null;
@@ -931,11 +1020,11 @@ void main() {
         expect(find.text('-1'), findsNothing);
         expect(
           tester.getRect(find.widgetWithText(Center, '0')),
-          Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
+          const Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
         );
 
         debugDefaultTargetPlatformOverride = null;
-      }
+      },
     );
   };
 
@@ -1117,7 +1206,7 @@ void main() {
         );
         expect(
           tester.getRect(find.widgetWithText(Container, '0')),
-          Rect.fromLTRB(0.0, 60.0, 800.0, 260.0),
+          const Rect.fromLTRB(0.0, 60.0, 800.0, 260.0),
         );
 
         refreshCompleter.complete(null);
@@ -1299,7 +1388,7 @@ void main() {
         );
         expect(
           tester.getRect(find.widgetWithText(Center, '0')),
-          Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
+          const Rect.fromLTRB(0.0, 0.0, 800.0, 200.0),
         );
         verify(mockHelper.refreshTask()); // The refresh function still called.
 
@@ -1312,7 +1401,7 @@ void main() {
         );
 
         debugDefaultTargetPlatformOverride = null;
-      }
+      },
     );
   };
 

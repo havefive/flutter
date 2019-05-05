@@ -8,9 +8,13 @@ import '../demo/all.dart';
 import 'icons.dart';
 
 class GalleryDemoCategory {
-  const GalleryDemoCategory._({ this.name, this.icon });
-  @required final String name;
-  @required final IconData icon;
+  const GalleryDemoCategory._({
+    @required this.name,
+    @required this.icon,
+  });
+
+  final String name;
+  final IconData icon;
 
   @override
   bool operator ==(dynamic other) {
@@ -118,6 +122,14 @@ List<GalleryDemo> _buildGalleryDemos() {
       category: _kDemos,
       routeName: AnimationDemo.routeName,
       buildRoute: (BuildContext context) => const AnimationDemo(),
+    ),
+    GalleryDemo(
+      title: '2D Transformations',
+      subtitle: 'Pan, Zoom, Rotate',
+      icon: GalleryIcons.grid_on,
+      category: _kDemos,
+      routeName: TransformationsDemo.routeName,
+      buildRoute: (BuildContext context) => const TransformationsDemo(),
     ),
 
     // Style

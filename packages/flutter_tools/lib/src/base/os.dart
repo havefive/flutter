@@ -11,7 +11,7 @@ import 'process.dart';
 import 'process_manager.dart';
 
 /// Returns [OperatingSystemUtils] active in the current app context (i.e. zone).
-OperatingSystemUtils get os => context[OperatingSystemUtils];
+OperatingSystemUtils get os => context.get<OperatingSystemUtils>();
 
 abstract class OperatingSystemUtils {
   factory OperatingSystemUtils() {
@@ -62,7 +62,7 @@ abstract class OperatingSystemUtils {
     const Map<String, String> osNames = <String, String>{
       'macos': 'Mac OS',
       'linux': 'Linux',
-      'windows': 'Windows'
+      'windows': 'Windows',
     };
     final String osName = platform.operatingSystem;
     return osNames.containsKey(osName) ? osNames[osName] : osName;

@@ -35,8 +35,10 @@ class AliveState extends State<Alive> with AutomaticKeepAliveClientMixin {
   bool get wantKeepAlive => widget.alive;
 
   @override
-  Widget build(BuildContext context) =>
-     Text('${widget.index}:$wantKeepAlive');
+  Widget build(BuildContext context) {
+    super.build(context);
+    return Text('${widget.index}:$wantKeepAlive');
+  }
 }
 
 typedef WhetherToKeepAlive = bool Function(int);
@@ -324,7 +326,7 @@ void main() {
             child: Text('$i', textDirection: TextDirection.ltr),
           );
         },
-      )
+      ),
     );
 
     await tester.pumpWidget(
@@ -526,7 +528,7 @@ void main() {
       children: <Matcher>[
         matchesSemantics(
           children: <Matcher>[
-            matchesSemantics(hasImplicitScrolling: true)
+            matchesSemantics(hasImplicitScrolling: true),
           ],
         ),
       ],

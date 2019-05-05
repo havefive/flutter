@@ -119,7 +119,7 @@ class GestureRecognizerFactoryWithHandlers<T extends GestureRecognizer> extends 
 /// them to the callbacks. To ignore accessibility events, set
 /// [excludeFromSemantics] to true.
 ///
-/// See <http://flutter.io/gestures/> for additional information.
+/// See <http://flutter.dev/gestures/> for additional information.
 ///
 /// Material design applications typically react to touches with ink splash
 /// effects. The [InkWell] class implements this effect and can be used in place
@@ -555,13 +555,13 @@ class GestureDetector extends StatelessWidget {
         onForcePressUpdate != null ||
         onForcePressEnd != null) {
       gestures[ForcePressGestureRecognizer] = GestureRecognizerFactoryWithHandlers<ForcePressGestureRecognizer>(
-          () => ForcePressGestureRecognizer(debugOwner: this),
-          (ForcePressGestureRecognizer instance) {
-            instance
-              ..onStart = onForcePressStart
-              ..onPeak = onForcePressPeak
-              ..onUpdate = onForcePressUpdate
-              ..onEnd = onForcePressEnd;
+        () => ForcePressGestureRecognizer(debugOwner: this),
+        (ForcePressGestureRecognizer instance) {
+          instance
+            ..onStart = onForcePressStart
+            ..onPeak = onForcePressPeak
+            ..onUpdate = onForcePressUpdate
+            ..onEnd = onForcePressEnd;
         },
       );
     }
@@ -868,7 +868,7 @@ class RawGestureDetectorState extends State<RawGestureDetector> {
     Widget result = Listener(
       onPointerDown: _handlePointerDown,
       behavior: widget.behavior ?? _defaultBehavior,
-      child: widget.child
+      child: widget.child,
     );
     if (!widget.excludeFromSemantics)
       result = _GestureSemantics(owner: this, child: result);
@@ -893,7 +893,7 @@ class _GestureSemantics extends SingleChildRenderObjectWidget {
   const _GestureSemantics({
     Key key,
     Widget child,
-    this.owner
+    this.owner,
   }) : super(key: key, child: child);
 
   final RawGestureDetectorState owner;

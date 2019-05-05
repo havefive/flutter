@@ -417,6 +417,7 @@ class FlutterRunTestDriver extends FlutterTestDriver {
     await _setupProcess(
       <String>[
         'run',
+	'--disable-service-auth-codes',
         '--machine',
         '-d',
         'flutter-tester',
@@ -502,7 +503,7 @@ class FlutterRunTestDriver extends FlutterTestDriver {
     _debugPrint('Performing ${ pause ? "paused " : "" }${ fullRestart ? "hot restart" : "hot reload" }...');
     final dynamic hotReloadResponse = await _sendRequest(
       'app.restart',
-      <String, dynamic>{'appId': _currentRunningAppId, 'fullRestart': fullRestart, 'pause': pause}
+      <String, dynamic>{'appId': _currentRunningAppId, 'fullRestart': fullRestart, 'pause': pause},
     );
     _debugPrint('${ fullRestart ? "Hot restart" : "Hot reload" } complete.');
 
@@ -511,6 +512,9 @@ class FlutterRunTestDriver extends FlutterTestDriver {
   }
 
   Future<int> detach() async {
+    if (_process == null) {
+      return 0;
+    }
     if (_vmService != null) {
       _debugPrint('Closing VM service...');
       _vmService.dispose();
@@ -565,7 +569,7 @@ class FlutterRunTestDriver extends FlutterTestDriver {
     final Map<String, dynamic> request = <String, dynamic>{
       'id': requestId,
       'method': method,
-      'params': params
+      'params': params,
     };
     final String jsonEncoded = json.encode(<Map<String, dynamic>>[request]);
     _debugPrint(jsonEncoded, topic: '=stdin=>');
@@ -604,9 +608,10 @@ class FlutterTestTestDriver extends FlutterTestDriver {
   }) async {
     await _setupProcess(<String>[
         'test',
+	'--disable-service-auth-codes',
         '--machine',
         '-d',
-        'flutter-tester'
+        'flutter-tester',
     ], script: testFile, withDebugger: withDebugger, pauseOnExceptions: pauseOnExceptions, pidFile: pidFile, beforeStart: beforeStart);
   }
 
