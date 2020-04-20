@@ -1,4 +1,5 @@
 {
+  "moreButtonTooltip": "Mehr",
   "tabLabel": "Tab $tabIndex von $tabCount",
   "showAccountsLabel": "Konten anzeigen",
   "hideAccountsLabel": "Konten ausblenden",
@@ -32,8 +33,8 @@
   "pasteButtonLabel": "EINFÜGEN",
   "selectAllButtonLabel": "ALLE AUSWÄHLEN",
   "viewLicensesButtonLabel": "LIZENZEN ANZEIGEN",
-  "anteMeridiemAbbreviation": "VORM.",
-  "postMeridiemAbbreviation": "NACHM.",
+  "anteMeridiemAbbreviation": "AM",
+  "postMeridiemAbbreviation": "PM",
   "modalBarrierDismissLabel": "Schliessen",
   "drawerLabel": "Navigationsmenü",
   "popupMenuLabel": "Pop-up-Menü",

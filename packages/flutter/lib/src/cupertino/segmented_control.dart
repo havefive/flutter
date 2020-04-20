@@ -1,4 +1,4 @@
-// Copyright 2018 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -11,9 +11,9 @@ import 'package:flutter/widgets.dart';
 
 import 'theme.dart';
 
-// Minimum padding from horizontal edges of segmented control to edges of
+// Minimum padding from edges of the segmented control to edges of
 // encompassing widget.
-const EdgeInsets _kHorizontalItemPadding = EdgeInsets.symmetric(horizontal: 16.0);
+const EdgeInsetsGeometry _kHorizontalItemPadding = EdgeInsets.symmetric(horizontal: 16.0);
 
 // Minimum height of the segmented control.
 const double _kMinSegmentedControlHeight = 28.0;
@@ -61,6 +61,8 @@ const Duration _kFadeDuration = Duration(milliseconds: 165);
 ///
 /// See also:
 ///
+///  * [CupertinoSegmentedControl], a segmented control widget in the style used
+///    up until iOS 13.
 ///  * <https://developer.apple.com/design/human-interface-guidelines/ios/controls/segmented-controls/>
 class CupertinoSegmentedControl<T> extends StatefulWidget {
   /// Creates an iOS-style segmented control bar.
@@ -87,6 +89,7 @@ class CupertinoSegmentedControl<T> extends StatefulWidget {
     this.selectedColor,
     this.borderColor,
     this.pressedColor,
+    this.padding,
   }) : assert(children != null),
        assert(children.length >= 2),
        assert(onValueChanged != null),
@@ -121,7 +124,7 @@ class CupertinoSegmentedControl<T> extends StatefulWidget {
   /// the parent [StatefulWidget] using the [State.setState] method, so that
   /// the parent gets rebuilt; for example:
   ///
-  /// {@tool sample}
+  /// {@tool snippet}
   ///
   /// ```dart
   /// class SegmentedControlExample extends StatefulWidget {
@@ -178,6 +181,11 @@ class CupertinoSegmentedControl<T> extends StatefulWidget {
   ///
   /// Defaults to the selectedColor at 20% opacity if null.
   final Color pressedColor;
+
+  /// The CupertinoSegmentedControl will be placed inside this padding
+  ///
+  /// Defaults to EdgeInsets.symmetric(horizontal: 16.0)
+  final EdgeInsetsGeometry padding;
 
   @override
   _SegmentedControlState<T> createState() => _SegmentedControlState<T>();
@@ -251,13 +259,13 @@ class _SegmentedControlState<T> extends State<CupertinoSegmentedControl<T>>
 
   void _updateAnimationControllers() {
     assert(mounted, 'This should only be called after didUpdateDependencies');
-    for (AnimationController controller in _selectionControllers) {
+    for (final AnimationController controller in _selectionControllers) {
       controller.dispose();
     }
     _selectionControllers.clear();
     _childTweens.clear();
 
-    for (T key in widget.children.keys) {
+    for (final T key in widget.children.keys) {
       final AnimationController animationController = createAnimationController();
       if (widget.groupValue == key) {
         _childTweens.add(_reverseBackgroundColorTween);
@@ -288,7 +296,7 @@ class _SegmentedControlState<T> extends State<CupertinoSegmentedControl<T>>
 
     if (oldWidget.groupValue != widget.groupValue) {
       int index = 0;
-      for (T key in widget.children.keys) {
+      for (final T key in widget.children.keys) {
         if (widget.groupValue == key) {
           _childTweens[index] = _forwardBackgroundColorTween;
           _selectionControllers[index].forward();
@@ -303,7 +311,7 @@ class _SegmentedControlState<T> extends State<CupertinoSegmentedControl<T>>
 
   @override
   void dispose() {
-    for (AnimationController animationController in _selectionControllers) {
+    for (final AnimationController animationController in _selectionControllers) {
       animationController.dispose();
     }
     super.dispose();
@@ -325,10 +333,12 @@ class _SegmentedControlState<T> extends State<CupertinoSegmentedControl<T>>
   }
 
   void _onTap(T currentKey) {
-    if (currentKey != widget.groupValue && currentKey == _pressedKey) {
+    if (currentKey != _pressedKey)
+      return;
+    if (currentKey != widget.groupValue) {
       widget.onValueChanged(currentKey);
-      _pressedKey = null;
     }
+    _pressedKey = null;
   }
 
   Color getTextColor(int index, T currentKey) {
@@ -356,7 +366,7 @@ class _SegmentedControlState<T> extends State<CupertinoSegmentedControl<T>>
     int index = 0;
     int selectedIndex;
     int pressedIndex;
-    for (T currentKey in widget.children.keys) {
+    for (final T currentKey in widget.children.keys) {
       selectedIndex = (widget.groupValue == currentKey) ? index : selectedIndex;
       pressedIndex = (_pressedKey == currentKey) ? index : pressedIndex;
 
@@ -407,7 +417,7 @@ class _SegmentedControlState<T> extends State<CupertinoSegmentedControl<T>>
     );
 
     return Padding(
-      padding: _kHorizontalItemPadding.resolve(Directionality.of(context)),
+      padding: widget.padding ?? _kHorizontalItemPadding,
       child: UnconstrainedBox(
         constrainedAxis: Axis.horizontal,
         child: box,
@@ -466,7 +476,6 @@ class _RenderSegmentedControl<T> extends RenderBox
     with ContainerRenderObjectMixin<RenderBox, ContainerBoxParentData<RenderBox>>,
         RenderBoxContainerDefaultsMixin<RenderBox, ContainerBoxParentData<RenderBox>> {
   _RenderSegmentedControl({
-    List<RenderBox> children,
     @required int selectedIndex,
     @required int pressedIndex,
     @required TextDirection textDirection,
@@ -477,9 +486,7 @@ class _RenderSegmentedControl<T> extends RenderBox
        _selectedIndex = selectedIndex,
        _pressedIndex = pressedIndex,
        _backgroundColors = backgroundColors,
-       _borderColor = borderColor {
-    addAll(children);
-  }
+       _borderColor = borderColor;
 
   int get selectedIndex => _selectedIndex;
   int _selectedIndex;
@@ -536,7 +543,7 @@ class _RenderSegmentedControl<T> extends RenderBox
     RenderBox child = firstChild;
     double minWidth = 0.0;
     while (child != null) {
-      final _SegmentedControlContainerBoxParentData childParentData = child.parentData;
+      final _SegmentedControlContainerBoxParentData childParentData = child.parentData as _SegmentedControlContainerBoxParentData;
       final double childWidth = child.getMinIntrinsicWidth(height);
       minWidth = math.max(minWidth, childWidth);
       child = childParentData.nextSibling;
@@ -549,7 +556,7 @@ class _RenderSegmentedControl<T> extends RenderBox
     RenderBox child = firstChild;
     double maxWidth = 0.0;
     while (child != null) {
-      final _SegmentedControlContainerBoxParentData childParentData = child.parentData;
+      final _SegmentedControlContainerBoxParentData childParentData = child.parentData as _SegmentedControlContainerBoxParentData;
       final double childWidth = child.getMaxIntrinsicWidth(height);
       maxWidth = math.max(maxWidth, childWidth);
       child = childParentData.nextSibling;
@@ -562,7 +569,7 @@ class _RenderSegmentedControl<T> extends RenderBox
     RenderBox child = firstChild;
     double minHeight = 0.0;
     while (child != null) {
-      final _SegmentedControlContainerBoxParentData childParentData = child.parentData;
+      final _SegmentedControlContainerBoxParentData childParentData = child.parentData as _SegmentedControlContainerBoxParentData;
       final double childHeight = child.getMinIntrinsicHeight(width);
       minHeight = math.max(minHeight, childHeight);
       child = childParentData.nextSibling;
@@ -575,7 +582,7 @@ class _RenderSegmentedControl<T> extends RenderBox
     RenderBox child = firstChild;
     double maxHeight = 0.0;
     while (child != null) {
-      final _SegmentedControlContainerBoxParentData childParentData = child.parentData;
+      final _SegmentedControlContainerBoxParentData childParentData = child.parentData as _SegmentedControlContainerBoxParentData;
       final double childHeight = child.getMaxIntrinsicHeight(width);
       maxHeight = math.max(maxHeight, childHeight);
       child = childParentData.nextSibling;
@@ -599,7 +606,7 @@ class _RenderSegmentedControl<T> extends RenderBox
     RenderBox child = leftChild;
     double start = 0.0;
     while (child != null) {
-      final _SegmentedControlContainerBoxParentData childParentData = child.parentData;
+      final _SegmentedControlContainerBoxParentData childParentData = child.parentData as _SegmentedControlContainerBoxParentData;
       final Offset childOffset = Offset(start, 0.0);
       childParentData.offset = childOffset;
       final Rect childRect = Rect.fromLTWH(start, 0.0, child.size.width, child.size.height);
@@ -621,10 +628,11 @@ class _RenderSegmentedControl<T> extends RenderBox
 
   @override
   void performLayout() {
+    final BoxConstraints constraints = this.constraints;
     double maxHeight = _kMinSegmentedControlHeight;
 
     double childWidth = constraints.minWidth / childCount;
-    for (RenderBox child in getChildrenAsList()) {
+    for (final RenderBox child in getChildrenAsList()) {
       childWidth = math.max(childWidth, child.getMaxIntrinsicWidth(double.infinity));
     }
     childWidth = math.min(childWidth, constraints.maxWidth / childCount);
@@ -683,7 +691,7 @@ class _RenderSegmentedControl<T> extends RenderBox
   void _paintChild(PaintingContext context, Offset offset, RenderBox child, int childIndex) {
     assert(child != null);
 
-    final _SegmentedControlContainerBoxParentData childParentData = child.parentData;
+    final _SegmentedControlContainerBoxParentData childParentData = child.parentData as _SegmentedControlContainerBoxParentData;
 
     context.canvas.drawRRect(
       childParentData.surroundingRect.shift(offset),
@@ -703,13 +711,21 @@ class _RenderSegmentedControl<T> extends RenderBox
   }
 
   @override
-  bool hitTestChildren(HitTestResult result, { @required Offset position }) {
+  bool hitTestChildren(BoxHitTestResult result, { @required Offset position }) {
     assert(position != null);
     RenderBox child = lastChild;
     while (child != null) {
-      final _SegmentedControlContainerBoxParentData childParentData = child.parentData;
+      final _SegmentedControlContainerBoxParentData childParentData = child.parentData as _SegmentedControlContainerBoxParentData;
       if (childParentData.surroundingRect.contains(position)) {
-        return child.hitTest(result, position: (Offset.zero & child.size).center);
+        final Offset center = (Offset.zero & child.size).center;
+        return result.addWithRawTransform(
+          transform: MatrixUtils.forceToPoint(center),
+          position: center,
+          hitTest: (BoxHitTestResult result, Offset position) {
+            assert(position == center);
+            return child.hitTest(result, position: center);
+          },
+        );
       }
       child = childParentData.previousSibling;
     }

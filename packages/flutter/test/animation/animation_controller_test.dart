@@ -1,9 +1,10 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -138,6 +139,69 @@ void main() {
     expect(statusLog, equals(<AnimationStatus>[ AnimationStatus.dismissed, AnimationStatus.forward ]));
     expect(valueLog, equals(<double>[ 0.0 ]));
     expect(controller.value, equals(0.0));
+  });
+
+  test('Forward and reverse with different durations', () {
+    AnimationController controller = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      reverseDuration: const Duration(milliseconds: 50),
+      vsync: const TestVSync(),
+    );
+
+    controller.forward();
+    tick(const Duration(milliseconds: 10));
+    tick(const Duration(milliseconds: 30));
+    expect(controller.value, closeTo(0.2, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 60));
+    expect(controller.value, closeTo(0.5, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 90));
+    expect(controller.value, closeTo(0.8, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 120));
+    expect(controller.value, closeTo(1.0, precisionErrorTolerance));
+    controller.stop();
+
+    controller.reverse();
+    tick(const Duration(milliseconds: 210));
+    tick(const Duration(milliseconds: 220));
+    expect(controller.value, closeTo(0.8, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 230));
+    expect(controller.value, closeTo(0.6, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 240));
+    expect(controller.value, closeTo(0.4, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 260));
+    expect(controller.value, closeTo(0.0, precisionErrorTolerance));
+    controller.stop();
+
+    // Swap which duration is longer.
+    controller = AnimationController(
+      duration: const Duration(milliseconds: 50),
+      reverseDuration: const Duration(milliseconds: 100),
+      vsync: const TestVSync(),
+    );
+
+    controller.forward();
+    tick(const Duration(milliseconds: 10));
+    tick(const Duration(milliseconds: 30));
+    expect(controller.value, closeTo(0.4, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 60));
+    expect(controller.value, closeTo(1.0, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 90));
+    expect(controller.value, closeTo(1.0, precisionErrorTolerance));
+    controller.stop();
+
+    controller.reverse();
+    tick(const Duration(milliseconds: 210));
+    tick(const Duration(milliseconds: 220));
+    expect(controller.value, closeTo(0.9, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 230));
+    expect(controller.value, closeTo(0.8, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 240));
+    expect(controller.value, closeTo(0.7, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 260));
+    expect(controller.value, closeTo(0.5, precisionErrorTolerance));
+    tick(const Duration(milliseconds: 310));
+    expect(controller.value, closeTo(0.0, precisionErrorTolerance));
+    controller.stop();
   });
 
   test('Forward only from value', () {
@@ -284,7 +348,29 @@ void main() {
     expect(controller.repeat, throwsFlutterError);
 
     controller.dispose();
-    expect(controller.dispose, throwsFlutterError);
+    FlutterError result;
+    try {
+      controller.dispose();
+    } on FlutterError catch (e) {
+      result = e;
+    }
+    expect(result, isNotNull);
+    expect(
+      result.toStringDeep(),
+      equalsIgnoringHashCodes(
+        'FlutterError\n'
+        '   AnimationController.dispose() called more than once.\n'
+        '   A given AnimationController cannot be disposed more than once.\n'
+        '   The following AnimationController object was disposed multiple\n'
+        '   times:\n'
+        '     AnimationController#00000(⏮ 0.000; paused; DISPOSED)\n'
+      ),
+    );
+    final DiagnosticPropertiesBuilder builder = DiagnosticPropertiesBuilder();
+    result.debugFillProperties(builder);
+    final DiagnosticsNode controllerProperty = builder.properties.last;
+    expect(controllerProperty.name, 'The following AnimationController object was disposed multiple times');
+    expect(controllerProperty.value, controller);
   });
 
   test('AnimationController repeat() throws if period is not specified', () {
@@ -581,92 +667,98 @@ void main() {
     statusLog.clear();
   });
 
-  test('calling repeat with reverse set to true makes the animation alternate '
-       'between lowerBound and upperBound values on each repeat', () {
-    final AnimationController controller = AnimationController(
-      duration: const Duration(milliseconds: 100),
-      value: 0.0,
-      lowerBound: 0.0,
-      upperBound: 1.0,
-      vsync: const TestVSync(),
-    );
+  test(
+    'calling repeat with reverse set to true makes the animation alternate '
+    'between lowerBound and upperBound values on each repeat',
+    () {
+      final AnimationController controller = AnimationController(
+        duration: const Duration(milliseconds: 100),
+        value: 0.0,
+        lowerBound: 0.0,
+        upperBound: 1.0,
+        vsync: const TestVSync(),
+      );
 
-    expect(controller.value, 0.0);
+      expect(controller.value, 0.0);
 
-    controller.repeat(reverse: true);
-    tick(const Duration(milliseconds: 0));
-    tick(const Duration(milliseconds: 25));
-    expect(controller.value, 0.25);
+      controller.repeat(reverse: true);
+      tick(const Duration(milliseconds: 0));
+      tick(const Duration(milliseconds: 25));
+      expect(controller.value, 0.25);
 
-    tick(const Duration(milliseconds: 0));
-    tick(const Duration(milliseconds: 125));
-    expect(controller.value, 0.75);
+      tick(const Duration(milliseconds: 0));
+      tick(const Duration(milliseconds: 125));
+      expect(controller.value, 0.75);
 
-    controller.reset();
-    controller.value = 1.0;
-    expect(controller.value, 1.0);
+      controller.reset();
+      controller.value = 1.0;
+      expect(controller.value, 1.0);
 
-    controller.repeat(reverse: true);
-    tick(const Duration(milliseconds: 0));
-    tick(const Duration(milliseconds: 25));
-    expect(controller.value, 0.75);
+      controller.repeat(reverse: true);
+      tick(const Duration(milliseconds: 0));
+      tick(const Duration(milliseconds: 25));
+      expect(controller.value, 0.75);
 
-    tick(const Duration(milliseconds: 0));
-    tick(const Duration(milliseconds: 125));
-    expect(controller.value, 0.25);
+      tick(const Duration(milliseconds: 0));
+      tick(const Duration(milliseconds: 125));
+      expect(controller.value, 0.25);
 
-    controller.reset();
-    controller.value = 0.5;
-    expect(controller.value, 0.5);
+      controller.reset();
+      controller.value = 0.5;
+      expect(controller.value, 0.5);
 
-    controller.repeat(reverse: true);
-    tick(const Duration(milliseconds: 0));
-    tick(const Duration(milliseconds: 50));
-    expect(controller.value, 1.0);
+      controller.repeat(reverse: true);
+      tick(const Duration(milliseconds: 0));
+      tick(const Duration(milliseconds: 50));
+      expect(controller.value, 1.0);
 
-    tick(const Duration(milliseconds: 0));
-    tick(const Duration(milliseconds: 150));
-    expect(controller.value, 0.0);
-  });
+      tick(const Duration(milliseconds: 0));
+      tick(const Duration(milliseconds: 150));
+      expect(controller.value, 0.0);
+    },
+  );
 
-  test('calling repeat with specified min and max values makes the animation '
-       'alternate between min and max values on each repeat', () {
-    final AnimationController controller = AnimationController(
-      duration: const Duration(milliseconds: 100),
-      value: 0.0,
-      lowerBound: 0.0,
-      upperBound: 1.0,
-      vsync: const TestVSync(),
-    );
+  test(
+    'calling repeat with specified min and max values makes the animation '
+    'alternate between min and max values on each repeat',
+    () {
+      final AnimationController controller = AnimationController(
+        duration: const Duration(milliseconds: 100),
+        value: 0.0,
+        lowerBound: 0.0,
+        upperBound: 1.0,
+        vsync: const TestVSync(),
+      );
 
-    expect(controller.value, 0.0);
+      expect(controller.value, 0.0);
 
-    controller.repeat(reverse: true, min: 0.5, max: 1.0);
-    tick(const Duration(milliseconds: 0));
-    tick(const Duration(milliseconds: 50));
-    expect(controller.value, 0.75);
+      controller.repeat(reverse: true, min: 0.5, max: 1.0);
+      tick(const Duration(milliseconds: 0));
+      tick(const Duration(milliseconds: 50));
+      expect(controller.value, 0.75);
 
-    tick(const Duration(milliseconds: 0));
-    tick(const Duration(milliseconds: 100));
-    expect(controller.value, 1.00);
+      tick(const Duration(milliseconds: 0));
+      tick(const Duration(milliseconds: 100));
+      expect(controller.value, 1.00);
 
-    tick(const Duration(milliseconds: 0));
-    tick(const Duration(milliseconds: 200));
-    expect(controller.value, 0.5);
+      tick(const Duration(milliseconds: 0));
+      tick(const Duration(milliseconds: 200));
+      expect(controller.value, 0.5);
 
-    controller.reset();
-    controller.value = 0.0;
-    expect(controller.value, 0.0);
+      controller.reset();
+      controller.value = 0.0;
+      expect(controller.value, 0.0);
 
-    controller.repeat(reverse: true, min: 1.0, max: 1.0);
-    tick(const Duration(milliseconds: 0));
-    tick(const Duration(milliseconds: 25));
-    expect(controller.value, 1.0);
+      controller.repeat(reverse: true, min: 1.0, max: 1.0);
+      tick(const Duration(milliseconds: 0));
+      tick(const Duration(milliseconds: 25));
+      expect(controller.value, 1.0);
 
-    tick(const Duration(milliseconds: 0));
-    tick(const Duration(milliseconds: 125));
-    expect(controller.value, 1.0);
-  });
+      tick(const Duration(milliseconds: 0));
+      tick(const Duration(milliseconds: 125));
+      expect(controller.value, 1.0);
+    },
+  );
 
   group('AnimationBehavior', () {
     test('Default values for constructor', () {
@@ -760,6 +852,69 @@ void main() {
     expect(() => controller.stop(), throwsAssertionError);
     expect(() => controller.forward(), throwsAssertionError);
     expect(() => controller.reverse(), throwsAssertionError);
-
   });
+
+  test('Simulations run forward', () {
+    final List<AnimationStatus> statuses = <AnimationStatus>[];
+    final AnimationController controller = AnimationController(
+      vsync: const TestVSync(),
+      duration: const Duration(seconds: 1),
+    )..addStatusListener((AnimationStatus status) {
+      statuses.add(status);
+    });
+
+    controller.animateWith(TestSimulation());
+    tick(const Duration(milliseconds: 0));
+    tick(const Duration(seconds: 2));
+    expect(statuses, <AnimationStatus>[AnimationStatus.forward]);
+  });
+
+  test('Simulations run forward even after a reverse run', () {
+    final List<AnimationStatus> statuses = <AnimationStatus>[];
+    final AnimationController controller = AnimationController(
+      vsync: const TestVSync(),
+      duration: const Duration(seconds: 1),
+    )..addStatusListener((AnimationStatus status) {
+      statuses.add(status);
+    });
+    controller.reverse(from: 1.0);
+    tick(const Duration(milliseconds: 0));
+    tick(const Duration(seconds: 2));
+    expect(statuses, <AnimationStatus>[AnimationStatus.completed, AnimationStatus.reverse, AnimationStatus.dismissed]);
+    statuses.clear();
+
+    controller.animateWith(TestSimulation());
+    tick(const Duration(milliseconds: 0));
+    tick(const Duration(seconds: 2));
+    expect(statuses, <AnimationStatus>[AnimationStatus.forward]);
+  });
+
+  test('Repeating animation with reverse: true report as forward and reverse', () {
+    final List<AnimationStatus> statuses = <AnimationStatus>[];
+    final AnimationController controller = AnimationController(
+      vsync: const TestVSync(),
+      duration: const Duration(seconds: 1),
+    )..addStatusListener((AnimationStatus status) {
+      statuses.add(status);
+    });
+
+    controller.repeat(reverse: true);
+    tick(const Duration(milliseconds: 0));
+    tick(const Duration(milliseconds: 999));
+    expect(statuses, <AnimationStatus>[AnimationStatus.forward]);
+    statuses.clear();
+    tick(const Duration(seconds: 1));
+    expect(statuses, <AnimationStatus>[AnimationStatus.reverse]);
+  });
+}
+
+class TestSimulation extends Simulation {
+  @override
+  double dx(double time) => time;
+
+  @override
+  bool isDone(double time) => false;
+
+  @override
+  double x(double time) => time;
 }

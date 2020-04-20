@@ -1,8 +1,7 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -36,7 +35,7 @@ void main() {
             },
           ),
         ),
-      )
+      ),
     );
 
     await tester.tap(find.text('Alarm'));
@@ -58,10 +57,10 @@ void main() {
                 icon: Icon(Icons.access_alarm),
                 title: Text('Alarm'),
               ),
-            ]
+            ],
           ),
         ),
-      )
+      ),
     );
 
     final RenderBox box = tester.renderObject(find.byType(BottomNavigationBar));
@@ -95,7 +94,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     const double selectedFontSize = 14.0;
@@ -106,10 +105,10 @@ void main() {
     final TextStyle unselectedIcon = _iconStyle(tester, Icons.access_alarm);
     expect(selectedFontStyle.color, equals(primaryColor));
     expect(selectedFontStyle.fontSize, selectedFontSize);
-    expect(selectedFontStyle.fontWeight, isNull);
+    expect(selectedFontStyle.fontWeight, equals(FontWeight.w400));
     expect(selectedFontStyle.height, isNull);
     expect(unselectedFontStyle.color, equals(captionColor));
-    expect(unselectedFontStyle.fontWeight, isNull);
+    expect(unselectedFontStyle.fontWeight, equals(FontWeight.w400));
     expect(unselectedFontStyle.height, isNull);
     // Unselected label has a font size of 14 but is scaled down to be font size 12.
     expect(
@@ -120,7 +119,18 @@ void main() {
     expect(selectedIcon.fontSize, equals(24.0));
     expect(unselectedIcon.color, equals(captionColor));
     expect(unselectedIcon.fontSize, equals(24.0));
-    expect(_getOpacity(tester, 'Alarm'), equals(1.0));
+    // There should not be any [Opacity] or [FadeTransition] widgets
+    // since showUnselectedLabels and showSelectedLabels are true.
+    final Finder findOpacity = find.descendant(
+      of: find.byType(BottomNavigationBar),
+      matching: find.byType(Opacity),
+    );
+    final Finder findFadeTransition = find.descendant(
+      of: find.byType(BottomNavigationBar),
+      matching: find.byType(FadeTransition),
+    );
+    expect(findOpacity, findsNothing);
+    expect(findFadeTransition, findsNothing);
     expect(_getMaterial(tester).elevation, equals(8.0));
   });
 
@@ -147,7 +157,7 @@ void main() {
               ],
             ),
           ),
-        )
+        ),
     );
 
     final TextStyle selectedFontStyle = tester.renderObject<RenderParagraph>(find.text('AC')).text.style;
@@ -188,7 +198,7 @@ void main() {
               ],
             ),
           ),
-        )
+        ),
     );
 
     final TextStyle selectedFontStyle = tester.renderObject<RenderParagraph>(find.text('AC')).text.style;
@@ -200,8 +210,8 @@ void main() {
   });
 
   testWidgets('Custom selected and unselected icon themes', (WidgetTester tester) async {
-    const IconThemeData selectedIconTheme = IconThemeData(size: 36, color: Color(1));
-    const IconThemeData unselectedIconTheme = IconThemeData(size: 18, color: Color(2));
+    const IconThemeData selectedIconTheme = IconThemeData(size: 36, color: Color(0x00000001));
+    const IconThemeData unselectedIconTheme = IconThemeData(size: 18, color: Color(0x00000002));
 
     await tester.pumpWidget(
       MaterialApp(
@@ -222,7 +232,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     final TextStyle selectedIcon = _iconStyle(tester, Icons.ac_unit);
@@ -234,10 +244,10 @@ void main() {
   });
 
   testWidgets('color on icon theme overrides selected and unselected item colors', (WidgetTester tester) async {
-    const IconThemeData selectedIconTheme = IconThemeData(size: 36, color: Color(1));
-    const IconThemeData unselectedIconTheme = IconThemeData(size: 18, color: Color(2));
-    const Color selectedItemColor = Color(3);
-    const Color unselectedItemColor = Color(4);
+    const IconThemeData selectedIconTheme = IconThemeData(size: 36, color: Color(0x00000001));
+    const IconThemeData unselectedIconTheme = IconThemeData(size: 18, color: Color(0x00000002));
+    const Color selectedItemColor = Color(0x00000003);
+    const Color unselectedItemColor = Color(0x00000004);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -260,7 +270,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     final TextStyle selectedFontStyle = tester.renderObject<RenderParagraph>(find.text('AC')).text.style;
@@ -304,7 +314,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     final EdgeInsets selectedItemPadding = _itemPadding(tester, Icons.ac_unit);
@@ -347,7 +357,7 @@ void main() {
               ],
             ),
           ),
-        )
+        ),
     );
 
     final EdgeInsets selectedItemPadding = _itemPadding(tester, Icons.ac_unit);
@@ -389,7 +399,7 @@ void main() {
               ],
             ),
           ),
-        )
+        ),
     );
 
     final EdgeInsets selectedItemPadding = _itemPadding(tester, Icons.ac_unit);
@@ -418,7 +428,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     const double selectedFontSize = 14.0;
@@ -461,7 +471,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     expect(tester.renderObject<RenderParagraph>(find.text('AC')).text.style.fontSize, selectedFontSize);
@@ -473,7 +483,18 @@ void main() {
     );
     expect(tester.renderObject<RenderParagraph>(find.text('AC')).text.style.color, equals(selectedColor));
     expect(tester.renderObject<RenderParagraph>(find.text('Alarm')).text.style.color, equals(unselectedColor));
-    expect(_getOpacity(tester, 'Alarm'), equals(1.0));
+    // There should not be any [Opacity] or [FadeTransition] widgets
+    // since showUnselectedLabels and showSelectedLabels are true.
+    final Finder findOpacity = find.descendant(
+      of: find.byType(BottomNavigationBar),
+      matching: find.byType(Opacity),
+    );
+    final Finder findFadeTransition = find.descendant(
+      of: find.byType(BottomNavigationBar),
+      matching: find.byType(FadeTransition),
+    );
+    expect(findOpacity, findsNothing);
+    expect(findFadeTransition, findsNothing);
   });
 
 
@@ -510,7 +531,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     expect(tester.renderObject<RenderParagraph>(find.text('AC')).text.style.fontSize, selectedFontSize);
@@ -537,7 +558,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     expect(_getOpacity(tester, 'AC'), equals(1.0));
@@ -565,13 +586,13 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     expect(_getMaterial(tester).color, equals(color));
   });
 
-  testWidgets('Shifting BottomNavigationBar background color is overriden by item color', (WidgetTester tester) async {
+  testWidgets('Shifting BottomNavigationBar background color is overridden by item color', (WidgetTester tester) async {
     const Color itemColor = Colors.yellow;
     const Color backgroundColor = Colors.blue;
 
@@ -594,7 +615,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     expect(_getMaterial(tester).color, equals(itemColor));
@@ -643,7 +664,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     expect(tester.renderObject<RenderParagraph>(find.text('AC')).text.style.color, equals(fixedColor));
@@ -670,7 +691,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     expect(_getMaterial(tester).elevation, equals(customElevation));
@@ -692,11 +713,11 @@ void main() {
                   icon: Icon(Icons.access_alarm),
                   title: Text('Alarm'),
                 ),
-              ]
+              ],
             ),
           ),
         ),
-      )
+      ),
     );
 
     const double labelBottomMargin = 7.0; // 7 == defaulted selectedFontSize / 2.0.
@@ -723,7 +744,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     Iterable<RenderBox> actions = tester.renderObjectList(find.byType(InkResponse));
@@ -749,7 +770,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     await tester.pump(const Duration(milliseconds: 200));
@@ -786,7 +807,7 @@ void main() {
             ],
           ),
         ),
-      )
+      ),
     );
 
     // We want to make sure that the last label does not get displaced,
@@ -848,7 +869,7 @@ void main() {
             ),
           ),
         ),
-      )
+      ),
     );
 
     await tester.tap(find.text('Alarm'));
@@ -886,7 +907,7 @@ void main() {
             ),
           ),
         ),
-      )
+      ),
     );
 
     await tester.tap(find.text('Alarm'));
@@ -1192,25 +1213,21 @@ void main() {
               children: <TestSemantics>[
                 TestSemantics(
                   flags: <SemanticsFlag>[
+                    SemanticsFlag.isFocusable,
                     SemanticsFlag.isSelected,
-                    SemanticsFlag.isHeader,
                   ],
                   actions: <SemanticsAction>[SemanticsAction.tap],
                   label: 'AC\nTab 1 of 3',
                   textDirection: TextDirection.ltr,
                 ),
                 TestSemantics(
-                  flags: <SemanticsFlag>[
-                    SemanticsFlag.isHeader,
-                  ],
+                  flags: <SemanticsFlag>[SemanticsFlag.isFocusable],
                   actions: <SemanticsAction>[SemanticsAction.tap],
                   label: 'Alarm\nTab 2 of 3',
                   textDirection: TextDirection.ltr,
                 ),
                 TestSemantics(
-                  flags: <SemanticsFlag>[
-                    SemanticsFlag.isHeader,
-                  ],
+                  flags: <SemanticsFlag>[SemanticsFlag.isFocusable],
                   actions: <SemanticsAction>[SemanticsAction.tap],
                   label: 'Hot Tub\nTab 3 of 3',
                   textDirection: TextDirection.ltr,
@@ -1260,25 +1277,21 @@ void main() {
               children: <TestSemantics>[
                 TestSemantics(
                   flags: <SemanticsFlag>[
+                    SemanticsFlag.isFocusable,
                     SemanticsFlag.isSelected,
-                    SemanticsFlag.isHeader,
                   ],
                   actions: <SemanticsAction>[SemanticsAction.tap],
                   label: 'AC\nTab 1 of 3',
                   textDirection: TextDirection.ltr,
                 ),
                 TestSemantics(
-                  flags: <SemanticsFlag>[
-                    SemanticsFlag.isHeader,
-                  ],
+                  flags: <SemanticsFlag>[SemanticsFlag.isFocusable],
                   actions: <SemanticsAction>[SemanticsAction.tap],
                   label: 'Alarm\nTab 2 of 3',
                   textDirection: TextDirection.ltr,
                 ),
                 TestSemantics(
-                  flags: <SemanticsFlag>[
-                    SemanticsFlag.isHeader,
-                  ],
+                  flags: <SemanticsFlag>[SemanticsFlag.isFocusable],
                   actions: <SemanticsAction>[SemanticsAction.tap],
                   label: 'Hot Tub\nTab 3 of 3',
                   textDirection: TextDirection.ltr,
@@ -1391,12 +1404,11 @@ void main() {
     expect(tester.widget<Material>(backgroundMaterial).color, Colors.green);
   });
 
-  testWidgets('BottomNavigationBar shifting backgroundColor with transition', (WidgetTester tester) async {
+  group('BottomNavigationBar shifting backgroundColor with transition', () {
     // Regression test for: https://github.com/flutter/flutter/issues/22226
-
-    int _currentIndex = 0;
-    await tester.pumpWidget(
-      MaterialApp(
+    Widget runTest() {
+      int _currentIndex = 0;
+      return MaterialApp(
         home: StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
             return Scaffold(
@@ -1426,37 +1438,43 @@ void main() {
             );
           },
         ),
-      ),
-    );
-
-    await tester.tap(find.text('Green'));
-
-    for (int pump = 0; pump < 8; pump++) {
-      await tester.pump(const Duration(milliseconds: 30));
-      await expectLater(
-        find.byType(BottomNavigationBar),
-        matchesGoldenFile('bottom_navigation_bar.shifting_transition.2.$pump.png'),
-	      skip: !Platform.isLinux,
       );
+    }
+    for (int pump = 1; pump < 9; pump++) {
+      testWidgets('pump $pump', (WidgetTester tester) async {
+        await tester.pumpWidget(runTest());
+        await tester.tap(find.text('Green'));
+
+        for (int i = 0; i < pump; i++) {
+          await tester.pump(const Duration(milliseconds: 30));
+        }
+        await expectLater(
+          find.byType(BottomNavigationBar),
+          matchesGoldenFile('bottom_navigation_bar.shifting_transition.${pump - 1}.png'),
+        );
+      });
     }
   });
 
   testWidgets('BottomNavigationBar item title should not be nullable', (WidgetTester tester) async {
     expect(() {
       MaterialApp(
-          home: Scaffold(
-              bottomNavigationBar: BottomNavigationBar(
-                  type: BottomNavigationBarType.shifting,
-                  items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.ac_unit),
-              title: Text('AC'),
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.access_alarm),
-            ),
-          ])));
-    }, throwsA(isInstanceOf<AssertionError>()));
+        home: Scaffold(
+          bottomNavigationBar: BottomNavigationBar(
+            type: BottomNavigationBarType.shifting,
+            items: const <BottomNavigationBarItem>[
+              BottomNavigationBarItem(
+                icon: Icon(Icons.ac_unit),
+                title: Text('AC'),
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.access_alarm),
+              ),
+            ],
+          ),
+        ),
+      );
+    }, throwsAssertionError);
   });
 
   testWidgets(
@@ -1563,17 +1581,15 @@ void main() {
               children: <TestSemantics>[
                 TestSemantics(
                   flags: <SemanticsFlag>[
+                    SemanticsFlag.isFocusable,
                     SemanticsFlag.isSelected,
-                    SemanticsFlag.isHeader,
                   ],
                   actions: <SemanticsAction>[SemanticsAction.tap],
                   label: 'Red\nTab 1 of 2',
                   textDirection: TextDirection.ltr,
                 ),
                 TestSemantics(
-                  flags: <SemanticsFlag>[
-                    SemanticsFlag.isHeader,
-                  ],
+                  flags: <SemanticsFlag>[SemanticsFlag.isFocusable],
                   actions: <SemanticsAction>[SemanticsAction.tap],
                   label: 'Green\nTab 2 of 2',
                   textDirection: TextDirection.ltr,
@@ -1622,16 +1638,14 @@ void main() {
                 TestSemantics(
                   flags: <SemanticsFlag>[
                     SemanticsFlag.isSelected,
-                    SemanticsFlag.isHeader,
+                    SemanticsFlag.isFocusable,
                   ],
                   actions: <SemanticsAction>[SemanticsAction.tap],
                   label: 'Red\nTab 1 of 2',
                   textDirection: TextDirection.ltr,
                 ),
                 TestSemantics(
-                  flags: <SemanticsFlag>[
-                    SemanticsFlag.isHeader,
-                  ],
+                  flags: <SemanticsFlag>[SemanticsFlag.isFocusable],
                   actions: <SemanticsAction>[SemanticsAction.tap],
                   label: 'Green\nTab 2 of 2',
                   textDirection: TextDirection.ltr,
@@ -1676,7 +1690,7 @@ double _getOpacity(WidgetTester tester, String textValue) {
       find.ancestor(
         of: find.text(textValue),
         matching: find.byType(FadeTransition),
-      ).first
+      ).first,
   );
   return opacityWidget.opacity.value;
 }
@@ -1698,7 +1712,7 @@ EdgeInsets _itemPadding(WidgetTester tester, IconData icon) {
   return tester.widget<Padding>(
       find.descendant(
         of: find.ancestor(of: find.byIcon(icon), matching: find.byType(InkResponse)),
-        matching: find.byType(Padding)
+        matching: find.byType(Padding),
       ).first,
     ).padding.resolve(TextDirection.ltr);
 }

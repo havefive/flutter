@@ -1,25 +1,88 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:math' show min, max;
-import 'dart:ui' as ui show Paragraph, ParagraphBuilder, ParagraphConstraints, ParagraphStyle;
+import 'dart:ui' as ui show Paragraph, ParagraphBuilder, ParagraphConstraints, ParagraphStyle, PlaceholderAlignment, LineMetrics, TextHeightBehavior, BoxHeightStyle, BoxWidthStyle;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 
 import 'basic_types.dart';
+import 'inline_span.dart';
+import 'placeholder_span.dart';
 import 'strut_style.dart';
 import 'text_span.dart';
 
 export 'package:flutter/services.dart' show TextRange, TextSelection;
 
-/// The different ways of considering the width of one or more lines of text.
+/// Holds the [Size] and baseline required to represent the dimensions of
+/// a placeholder in text.
 ///
-/// See [Text.widthType].
+/// Placeholders specify an empty space in the text layout, which is used
+/// to later render arbitrary inline widgets into defined by a [WidgetSpan].
+///
+/// The [size] and [alignment] properties are required and cannot be null.
+///
+/// See also:
+///
+///  * [WidgetSpan], a subclass of [InlineSpan] and [PlaceholderSpan] that
+///    represents an inline widget embedded within text. The space this
+///    widget takes is indicated by a placeholder.
+///  * [RichText], a text widget that supports text inline widgets.
+@immutable
+class PlaceholderDimensions {
+  /// Constructs a [PlaceholderDimensions] with the specified parameters.
+  ///
+  /// The `size` and `alignment` are required as a placeholder's dimensions
+  /// require at least `size` and `alignment` to be fully defined.
+  const PlaceholderDimensions({
+    @required this.size,
+    @required this.alignment,
+    this.baseline,
+    this.baselineOffset,
+  }) : assert(size != null),
+       assert(alignment != null);
+
+  /// Width and height dimensions of the placeholder.
+  final Size size;
+
+  /// How to align the placeholder with the text.
+  ///
+  /// See also:
+  ///
+  ///  * [baseline], the baseline to align to when using
+  ///    [ui.PlaceholderAlignment.baseline],
+  ///    [ui.PlaceholderAlignment.aboveBaseline],
+  ///    or [ui.PlaceholderAlignment.underBaseline].
+  ///  * [baselineOffset], the distance of the alphabetic baseline from the upper
+  ///    edge of the placeholder.
+  final ui.PlaceholderAlignment alignment;
+
+  /// Distance of the [baseline] from the upper edge of the placeholder.
+  ///
+  /// Only used when [alignment] is [ui.PlaceholderAlignment.baseline].
+  final double baselineOffset;
+
+  /// The [TextBaseline] to align to. Used with:
+  ///
+  ///  * [ui.PlaceholderAlignment.baseline]
+  ///  * [ui.PlaceholderAlignment.aboveBaseline]
+  ///  * [ui.PlaceholderAlignment.underBaseline]
+  ///  * [ui.PlaceholderAlignment.middle]
+  final TextBaseline baseline;
+
+  @override
+  String toString() {
+    return 'PlaceholderDimensions($size, $baseline)';
+  }
+}
+
+/// The different ways of measuring the width of one or more lines of text.
+///
+/// See [Text.textWidthBasis], for example.
 enum TextWidthBasis {
-  /// Multiline text will take up the full width given by the parent. For single
+  /// multiline text will take up the full width given by the parent. For single
   /// line text, only the minimum amount of width needed to contain the text
   /// will be used. A common use case for this is a standard series of
   /// paragraphs.
@@ -30,6 +93,9 @@ enum TextWidthBasis {
   longestLine,
 }
 
+/// This is used to cache and pass the computed metrics regarding the
+/// caret's size and position. This is preferred due to the expensive
+/// nature of the calculation.
 class _CaretMetrics {
   const _CaretMetrics({this.offset, this.fullHeight});
   /// The offset of the top left corner of the caret from the top left
@@ -67,7 +133,7 @@ class TextPainter {
   ///
   /// The [maxLines] property, if non-null, must be greater than zero.
   TextPainter({
-    TextSpan text,
+    InlineSpan text,
     TextAlign textAlign = TextAlign.start,
     TextDirection textDirection,
     double textScaleFactor = 1.0,
@@ -76,6 +142,7 @@ class TextPainter {
     Locale locale,
     StrutStyle strutStyle,
     TextWidthBasis textWidthBasis = TextWidthBasis.parent,
+    ui.TextHeightBehavior textHeightBehavior,
   }) : assert(text == null || text.debugAssertIsValid()),
        assert(textAlign != null),
        assert(textScaleFactor != null),
@@ -89,27 +156,45 @@ class TextPainter {
        _ellipsis = ellipsis,
        _locale = locale,
        _strutStyle = strutStyle,
-       _textWidthBasis = textWidthBasis;
+       _textWidthBasis = textWidthBasis,
+       _textHeightBehavior = textHeightBehavior;
 
   ui.Paragraph _paragraph;
   bool _needsLayout = true;
 
+  /// Marks this text painter's layout information as dirty and removes cached
+  /// information.
+  ///
+  /// Uses this method to notify text painter to relayout in the case of
+  /// layout changes in engine. In most cases, updating text painter properties
+  /// in framework will automatically invoke this method.
+  void markNeedsLayout() {
+    _paragraph = null;
+    _needsLayout = true;
+    _previousCaretPosition = null;
+    _previousCaretPrototype = null;
+  }
+
   /// The (potentially styled) text to paint.
   ///
   /// After this is set, you must call [layout] before the next call to [paint].
-  ///
   /// This and [textDirection] must be non-null before you call [layout].
-  TextSpan get text => _text;
-  TextSpan _text;
-  set text(TextSpan value) {
+  ///
+  /// The [InlineSpan] this provides is in the form of a tree that may contain
+  /// multiple instances of [TextSpan]s and [WidgetSpan]s. To obtain a plain text
+  /// representation of the contents of this [TextPainter], use [InlineSpan.toPlainText]
+  /// to get the full contents of all nodes in the tree. [TextSpan.text] will
+  /// only provide the contents of the first node in the tree.
+  InlineSpan get text => _text;
+  InlineSpan _text;
+  set text(InlineSpan value) {
     assert(value == null || value.debugAssertIsValid());
     if (_text == value)
       return;
     if (_text?.style != value?.style)
       _layoutTemplate = null;
     _text = value;
-    _paragraph = null;
-    _needsLayout = true;
+    markNeedsLayout();
   }
 
   /// How the text should be aligned horizontally.
@@ -124,8 +209,7 @@ class TextPainter {
     if (_textAlign == value)
       return;
     _textAlign = value;
-    _paragraph = null;
-    _needsLayout = true;
+    markNeedsLayout();
   }
 
   /// The default directionality of the text.
@@ -149,9 +233,8 @@ class TextPainter {
     if (_textDirection == value)
       return;
     _textDirection = value;
-    _paragraph = null;
+    markNeedsLayout();
     _layoutTemplate = null; // Shouldn't really matter, but for strict correctness...
-    _needsLayout = true;
   }
 
   /// The number of font pixels for each logical pixel.
@@ -167,9 +250,8 @@ class TextPainter {
     if (_textScaleFactor == value)
       return;
     _textScaleFactor = value;
-    _paragraph = null;
+    markNeedsLayout();
     _layoutTemplate = null;
-    _needsLayout = true;
   }
 
   /// The string used to ellipsize overflowing text. Setting this to a non-empty
@@ -195,8 +277,7 @@ class TextPainter {
     if (_ellipsis == value)
       return;
     _ellipsis = value;
-    _paragraph = null;
-    _needsLayout = true;
+    markNeedsLayout();
   }
 
   /// The locale used to select region-specific glyphs.
@@ -206,8 +287,7 @@ class TextPainter {
     if (_locale == value)
       return;
     _locale = value;
-    _paragraph = null;
-    _needsLayout = true;
+    markNeedsLayout();
   }
 
   /// An optional maximum number of lines for the text to span, wrapping if
@@ -225,8 +305,7 @@ class TextPainter {
     if (_maxLines == value)
       return;
     _maxLines = value;
-    _paragraph = null;
-    _needsLayout = true;
+    markNeedsLayout();
   }
 
   /// {@template flutter.painting.textPainter.strutStyle}
@@ -247,11 +326,12 @@ class TextPainter {
     if (_strutStyle == value)
       return;
     _strutStyle = value;
-    _paragraph = null;
-    _needsLayout = true;
+    markNeedsLayout();
   }
 
-  /// {@macro flutter.dart:ui.text.TextWidthBasis}
+  /// {@template flutter.painting.textPainter.textWidthBasis}
+  /// Defines how to measure the width of the rendered text.
+  /// {@endtemplate}
   TextWidthBasis get textWidthBasis => _textWidthBasis;
   TextWidthBasis _textWidthBasis;
   set textWidthBasis(TextWidthBasis value) {
@@ -259,12 +339,66 @@ class TextPainter {
     if (_textWidthBasis == value)
       return;
     _textWidthBasis = value;
-    _paragraph = null;
-    _needsLayout = true;
+    markNeedsLayout();
   }
 
+  /// {@macro flutter.dart:ui.textHeightBehavior}
+  ui.TextHeightBehavior get textHeightBehavior => _textHeightBehavior;
+  ui.TextHeightBehavior _textHeightBehavior;
+  set textHeightBehavior(ui.TextHeightBehavior value) {
+    if (_textHeightBehavior == value)
+      return;
+    _textHeightBehavior = value;
+    markNeedsLayout();
+  }
 
   ui.Paragraph _layoutTemplate;
+
+  /// An ordered list of [TextBox]es that bound the positions of the placeholders
+  /// in the paragraph.
+  ///
+  /// Each box corresponds to a [PlaceholderSpan] in the order they were defined
+  /// in the [InlineSpan] tree.
+  List<TextBox> get inlinePlaceholderBoxes => _inlinePlaceholderBoxes;
+  List<TextBox> _inlinePlaceholderBoxes;
+
+  /// An ordered list of scales for each placeholder in the paragraph.
+  ///
+  /// The scale is used as a multiplier on the height, width and baselineOffset of
+  /// the placeholder. Scale is primarily used to handle accessibility scaling.
+  ///
+  /// Each scale corresponds to a [PlaceholderSpan] in the order they were defined
+  /// in the [InlineSpan] tree.
+  List<double> get inlinePlaceholderScales => _inlinePlaceholderScales;
+  List<double> _inlinePlaceholderScales;
+
+  /// Sets the dimensions of each placeholder in [text].
+  ///
+  /// The number of [PlaceholderDimensions] provided should be the same as the
+  /// number of [PlaceholderSpan]s in text. Passing in an empty or null `value`
+  /// will do nothing.
+  ///
+  /// If [layout] is attempted without setting the placeholder dimensions, the
+  /// placeholders will be ignored in the text layout and no valid
+  /// [inlinePlaceholderBoxes] will be returned.
+  void setPlaceholderDimensions(List<PlaceholderDimensions> value) {
+    if (value == null || value.isEmpty || listEquals(value, _placeholderDimensions)) {
+      return;
+    }
+    assert(() {
+      int placeholderCount = 0;
+      text.visitChildren((InlineSpan span) {
+        if (span is PlaceholderSpan) {
+          placeholderCount += 1;
+        }
+        return true;
+      });
+      return placeholderCount;
+    }() == value.length);
+    _placeholderDimensions = value;
+    markNeedsLayout();
+  }
+  List<PlaceholderDimensions> _placeholderDimensions;
 
   ui.ParagraphStyle _createParagraphStyle([ TextDirection defaultTextDirection ]) {
     // The defaultTextDirection argument is used for preferredLineHeight in case
@@ -276,6 +410,7 @@ class TextPainter {
       textDirection: textDirection ?? defaultTextDirection,
       textScaleFactor: textScaleFactor,
       maxLines: _maxLines,
+      textHeightBehavior: _textHeightBehavior,
       ellipsis: _ellipsis,
       locale: _locale,
       strutStyle: _strutStyle,
@@ -283,6 +418,7 @@ class TextPainter {
       textAlign: textAlign,
       textDirection: textDirection ?? defaultTextDirection,
       maxLines: maxLines,
+      textHeightBehavior: _textHeightBehavior,
       ellipsis: ellipsis,
       locale: locale,
     );
@@ -419,17 +555,20 @@ class TextPainter {
     _needsLayout = false;
     if (_paragraph == null) {
       final ui.ParagraphBuilder builder = ui.ParagraphBuilder(_createParagraphStyle());
-      _text.build(builder, textScaleFactor: textScaleFactor);
+      _text.build(builder, textScaleFactor: textScaleFactor, dimensions: _placeholderDimensions);
+      _inlinePlaceholderScales = builder.placeholderScales;
       _paragraph = builder.build();
     }
     _lastMinWidth = minWidth;
     _lastMaxWidth = maxWidth;
     _paragraph.layout(ui.ParagraphConstraints(width: maxWidth));
     if (minWidth != maxWidth) {
-      final double newWidth = maxIntrinsicWidth.clamp(minWidth, maxWidth);
-      if (newWidth != width)
+      final double newWidth = maxIntrinsicWidth.clamp(minWidth, maxWidth) as double;
+      if (newWidth != _applyFloatingPointHack(_paragraph.width)) {
         _paragraph.layout(ui.ParagraphConstraints(width: newWidth));
+      }
     }
+    _inlinePlaceholderBoxes = _paragraph.getBoxesForPlaceholders();
   }
 
   /// Paints the text onto the given canvas at the given offset.
@@ -463,6 +602,14 @@ class TextPainter {
     return value & 0xF800 == 0xD800;
   }
 
+  // Checks if the glyph is either [Unicode.RLM] or [Unicode.LRM]. These values take
+  // up zero space and do not have valid bounding boxes around them.
+  //
+  // We do not directly use the [Unicode] constants since they are strings.
+  bool _isUnicodeDirectionality(int value) {
+    return value == 0x200F || value == 0x200E;
+  }
+
   /// Returns the closest offset after `offset` at which the input cursor can be
   /// positioned.
   int getOffsetAfter(int offset) {
@@ -491,26 +638,30 @@ class TextPainter {
   // TODO(garyq): Use actual extended grapheme cluster length instead of
   // an increasing cluster length amount to achieve deterministic performance.
   Rect _getRectFromUpstream(int offset, Rect caretPrototype) {
-    final String flattenedText = _text.toPlainText();
+    final String flattenedText = _text.toPlainText(includePlaceholders: false);
     final int prevCodeUnit = _text.codeUnitAt(max(0, offset - 1));
     if (prevCodeUnit == null)
       return null;
 
     // Check for multi-code-unit glyphs such as emojis or zero width joiner
-    final bool needsSearch = _isUtf16Surrogate(prevCodeUnit) || _text.codeUnitAt(offset) == _zwjUtf16;
+    final bool needsSearch = _isUtf16Surrogate(prevCodeUnit) || _text.codeUnitAt(offset) == _zwjUtf16 || _isUnicodeDirectionality(prevCodeUnit);
     int graphemeClusterLength = needsSearch ? 2 : 1;
     List<TextBox> boxes = <TextBox>[];
     while (boxes.isEmpty && flattenedText != null) {
       final int prevRuneOffset = offset - graphemeClusterLength;
-      boxes = _paragraph.getBoxesForRange(prevRuneOffset, offset);
+      // Use BoxHeightStyle.strut to ensure that the caret's height fits within
+      // the line's height and is consistent throughout the line.
+      boxes = _paragraph.getBoxesForRange(prevRuneOffset, offset, boxHeightStyle: ui.BoxHeightStyle.strut);
       // When the range does not include a full cluster, no boxes will be returned.
       if (boxes.isEmpty) {
         // When we are at the beginning of the line, a non-surrogate position will
         // return empty boxes. We break and try from downstream instead.
-        if (!needsSearch)
+        if (!needsSearch) {
           break; // Only perform one iteration if no search is required.
-        if (prevRuneOffset < -flattenedText.length)
+        }
+        if (prevRuneOffset < -flattenedText.length) {
           break; // Stop iterating when beyond the max length of the text.
+        }
         // Multiply by two to log(n) time cover the entire text span. This allows
         // faster discovery of very long clusters and reduces the possibility
         // of certain large clusters taking much longer than others, which can
@@ -528,7 +679,7 @@ class TextPainter {
 
       final double caretEnd = box.end;
       final double dx = box.direction == TextDirection.rtl ? caretEnd - caretPrototype.width : caretEnd;
-      return Rect.fromLTRB(min(dx, width), box.top, min(dx, width), box.bottom);
+      return Rect.fromLTRB(min(dx, _paragraph.width), box.top, min(dx, _paragraph.width), box.bottom);
     }
     return null;
   }
@@ -538,26 +689,30 @@ class TextPainter {
   // TODO(garyq): Use actual extended grapheme cluster length instead of
   // an increasing cluster length amount to achieve deterministic performance.
   Rect _getRectFromDownstream(int offset, Rect caretPrototype) {
-    final String flattenedText = _text.toPlainText();
+    final String flattenedText = _text.toPlainText(includePlaceholders: false);
     // We cap the offset at the final index of the _text.
     final int nextCodeUnit = _text.codeUnitAt(min(offset, flattenedText == null ? 0 : flattenedText.length - 1));
     if (nextCodeUnit == null)
       return null;
     // Check for multi-code-unit glyphs such as emojis or zero width joiner
-    final bool needsSearch = _isUtf16Surrogate(nextCodeUnit) || nextCodeUnit == _zwjUtf16;
+    final bool needsSearch = _isUtf16Surrogate(nextCodeUnit) || nextCodeUnit == _zwjUtf16 || _isUnicodeDirectionality(nextCodeUnit);
     int graphemeClusterLength = needsSearch ? 2 : 1;
     List<TextBox> boxes = <TextBox>[];
     while (boxes.isEmpty && flattenedText != null) {
       final int nextRuneOffset = offset + graphemeClusterLength;
-      boxes = _paragraph.getBoxesForRange(offset, nextRuneOffset);
+      // Use BoxHeightStyle.strut to ensure that the caret's height fits within
+      // the line's height and is consistent throughout the line.
+      boxes = _paragraph.getBoxesForRange(offset, nextRuneOffset, boxHeightStyle: ui.BoxHeightStyle.strut);
       // When the range does not include a full cluster, no boxes will be returned.
       if (boxes.isEmpty) {
         // When we are at the end of the line, a non-surrogate position will
         // return empty boxes. We break and try from upstream instead.
-        if (!needsSearch)
+        if (!needsSearch) {
           break; // Only perform one iteration if no search is required.
-        if (nextRuneOffset >= flattenedText.length << 1)
+        }
+        if (nextRuneOffset >= flattenedText.length << 1) {
           break; // Stop iterating when beyond the max length of the text.
+        }
         // Multiply by two to log(n) time cover the entire text span. This allows
         // faster discovery of very long clusters and reduces the possibility
         // of certain large clusters taking much longer than others, which can
@@ -568,7 +723,7 @@ class TextPainter {
       final TextBox box = boxes.last;
       final double caretStart = box.start;
       final double dx = box.direction == TextDirection.rtl ? caretStart - caretPrototype.width : caretStart;
-      return Rect.fromLTRB(min(dx, width), box.top, min(dx, width), box.bottom);
+      return Rect.fromLTRB(min(dx, _paragraph.width), box.top, min(dx, _paragraph.width), box.bottom);
     }
     return null;
   }
@@ -629,7 +784,7 @@ class TextPainter {
 
   // Holds the TextPosition and caretPrototype the last caret metrics were
   // computed with. When new values are passed in, we recompute the caret metrics.
-  // only as nessecary.
+  // only as necessary.
   TextPosition _previousCaretPosition;
   Rect _previousCaretPrototype;
 
@@ -656,16 +811,36 @@ class TextPainter {
       offset: rect != null ? Offset(rect.left, rect.top) : _emptyOffset,
       fullHeight: rect != null ? rect.bottom - rect.top : null,
     );
+
+    // Cache the input parameters to prevent repeat work later.
+    _previousCaretPosition = position;
+    _previousCaretPrototype = caretPrototype;
   }
 
   /// Returns a list of rects that bound the given selection.
   ///
+  /// The [boxHeightStyle] and [boxWidthStyle] arguments may be used to select
+  /// the shape of the [TextBox]s. These properties default to
+  /// [ui.BoxHeightStyle.tight] and [ui.BoxWidthStyle.tight] respectively and
+  /// must not be null.
+  ///
   /// A given selection might have more than one rect if this text painter
   /// contains bidirectional text because logically contiguous text might not be
   /// visually contiguous.
-  List<TextBox> getBoxesForSelection(TextSelection selection) {
+  List<TextBox> getBoxesForSelection(
+    TextSelection selection, {
+    ui.BoxHeightStyle boxHeightStyle = ui.BoxHeightStyle.tight,
+    ui.BoxWidthStyle boxWidthStyle = ui.BoxWidthStyle.tight,
+  }) {
     assert(!_needsLayout);
-    return _paragraph.getBoxesForRange(selection.start, selection.end);
+    assert(boxHeightStyle != null);
+    assert(boxWidthStyle != null);
+    return _paragraph.getBoxesForRange(
+      selection.start,
+      selection.end,
+      boxHeightStyle: boxHeightStyle,
+      boxWidthStyle: boxWidthStyle
+    );
   }
 
   /// Returns the position within the text for the given pixel offset.
@@ -683,7 +858,34 @@ class TextPainter {
   /// <http://www.unicode.org/reports/tr29/#Word_Boundaries>.
   TextRange getWordBoundary(TextPosition position) {
     assert(!_needsLayout);
-    final List<int> indices = _paragraph.getWordBoundary(position.offset);
-    return TextRange(start: indices[0], end: indices[1]);
+    return _paragraph.getWordBoundary(position);
+  }
+
+  /// Returns the text range of the line at the given offset.
+  ///
+  /// The newline, if any, is included in the range.
+  TextRange getLineBoundary(TextPosition position) {
+    assert(!_needsLayout);
+    return _paragraph.getLineBoundary(position);
+  }
+
+  /// Returns the full list of [LineMetrics] that describe in detail the various
+  /// metrics of each laid out line.
+  ///
+  /// The [LineMetrics] list is presented in the order of the lines they represent.
+  /// For example, the first line is in the zeroth index.
+  ///
+  /// [LineMetrics] contains measurements such as ascent, descent, baseline, and
+  /// width for the line as a whole, and may be useful for aligning additional
+  /// widgets to a particular line.
+  ///
+  /// Valid only after [layout] has been called.
+  ///
+  /// This can potentially return a large amount of data, so it is not recommended
+  /// to repeatedly call this. Instead, cache the results. The cached results
+  /// should be invalidated upon the next successful [layout].
+  List<ui.LineMetrics> computeLineMetrics() {
+    assert(!_needsLayout);
+    return _paragraph.computeLineMetrics();
   }
 }

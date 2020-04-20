@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,10 +8,13 @@ import 'package:flutter/widgets.dart';
 
 import 'constants.dart';
 
+// Examples can assume:
+// BuildContext context;
+
 /// Coordinates tab selection between a [TabBar] and a [TabBarView].
 ///
 /// The [index] property is the index of the selected tab and the [animation]
-/// represents the current scroll positions of the tab bar and the tar bar view.
+/// represents the current scroll positions of the tab bar and the tab bar view.
 /// The selected tab's index can be changed with [animateTo].
 ///
 /// A stateful widget that builds a [TabBar] or a [TabBarView] can create
@@ -21,7 +24,9 @@ import 'constants.dart';
 /// ancestor, a [TabController] can be shared by providing a
 /// [DefaultTabController] inherited widget.
 ///
-/// {@tool sample}
+/// {@animation 700 540 https://flutter.github.io/assets-for-api-docs/assets/material/tabs.mp4}
+///
+/// {@tool snippet}
 ///
 /// This widget introduces a [Scaffold] with an [AppBar] and a [TabBar].
 ///
@@ -64,7 +69,13 @@ import 'constants.dart';
 ///       body: TabBarView(
 ///         controller: _tabController,
 ///         children: myTabs.map((Tab tab) {
-///           return Center(child: Text(tab.text));
+///           final String label = tab.text.toLowerCase();
+///           return Center(
+///             child: Text(
+///               'This is the $label tab',
+///               style: const TextStyle(fontSize: 36),
+///             ),
+///           );
 ///         }).toList(),
 ///       ),
 ///     );
@@ -76,7 +87,7 @@ class TabController extends ChangeNotifier {
   /// Creates an object that manages the state required by [TabBar] and a
   /// [TabBarView].
   ///
-  /// The [length] must not be null or negative. Typically its a value greater
+  /// The [length] must not be null or negative. Typically it's a value greater
   /// than one, i.e. typically there are two or more tabs. The [length] must
   /// match [TabBar.tabs]'s and [TabBarView.children]'s length.
   ///
@@ -107,11 +118,10 @@ class TabController extends ChangeNotifier {
   /// Creates a new [TabController] with `index`, `previousIndex`, and `length`
   /// if they are non-null.
   ///
-  /// This will reuse the existing [_animationController].
+  /// This method is used by [DefaultTabController].
   ///
-  /// This is useful for [DefaultTabController], for example when
-  /// [DefaultTabController.length] is updated, this method is called so that a
-  /// new [TabController] is created without having to create a new [AnimationController].
+  /// When [DefaultTabController.length] is updated, this method is called to
+  /// create a new [TabController] without creating a new [AnimationController].
   TabController _copyWith({ int index, int length, int previousIndex }) {
     return TabController._(
       index: index ?? _index,
@@ -130,19 +140,20 @@ class TabController extends ChangeNotifier {
   /// animation's value can be [offset] by +/- 1.0 to reflect [TabBarView]
   /// drag scrolling.
   ///
-  /// If length is zero or one, [index] animations don't happen and the value
-  /// of this property is [kAlwaysCompleteAnimation].
-  Animation<double> get animation => _animationController?.view ?? kAlwaysCompleteAnimation;
-  final AnimationController _animationController;
+  /// If this [TabController] was disposed, then return null.
+  Animation<double> get animation => _animationController?.view;
+  AnimationController _animationController;
 
-  /// The total number of tabs. Typically greater than one. Must match
-  /// [TabBar.tabs]'s and [TabBarView.children]'s length.
+  /// The total number of tabs.
+  ///
+  /// Typically greater than one. Must match [TabBar.tabs]'s and
+  /// [TabBarView.children]'s length.
   final int length;
 
   void _changeIndex(int value, { Duration duration, Curve curve }) {
     assert(value != null);
     assert(value >= 0 && (value < length || length == 0));
-    assert(duration == null ? curve == null : true);
+    assert(duration != null || curve == null);
     assert(_indexIsChangingCount >= 0);
     if (value == _index || length < 2)
       return;
@@ -165,9 +176,10 @@ class TabController extends ChangeNotifier {
     }
   }
 
-  /// The index of the currently selected tab. Changing the index also updates
-  /// [previousIndex], sets the [animation]'s value to index, resets
-  /// [indexIsChanging] to false, and notifies listeners.
+  /// The index of the currently selected tab.
+  ///
+  /// Changing the index also updates [previousIndex], sets the [animation]'s
+  /// value to index, resets [indexIsChanging] to false, and notifies listeners.
   ///
   /// To change the currently selected tab and play the [animation] use [animateTo].
   ///
@@ -179,7 +191,9 @@ class TabController extends ChangeNotifier {
     _changeIndex(value);
   }
 
-  /// The index of the previously selected tab. Initially the same as [index].
+  /// The index of the previously selected tab.
+  ///
+  /// Initially the same as [index].
   int get previousIndex => _previousIndex;
   int _previousIndex;
 
@@ -201,8 +215,9 @@ class TabController extends ChangeNotifier {
     _changeIndex(value, duration: duration, curve: curve);
   }
 
-  /// The difference between the [animation]'s value and [index]. The offset
-  /// value must be between -1.0 and 1.0.
+  /// The difference between the [animation]'s value and [index].
+  ///
+  /// The offset value must be between -1.0 and 1.0.
   ///
   /// This property is typically set by the [TabBarView] when the user
   /// drags left or right. A value between -1.0 and 0.0 implies that the
@@ -221,6 +236,7 @@ class TabController extends ChangeNotifier {
   @override
   void dispose() {
     _animationController?.dispose();
+    _animationController = null;
     super.dispose();
   }
 }
@@ -251,6 +267,8 @@ class _TabControllerScope extends InheritedWidget {
 /// widgets are created by a stateless parent widget or by different parent
 /// widgets.
 ///
+/// {@animation 700 540 https://flutter.github.io/assets-for-api-docs/assets/material/tabs.mp4}
+///
 /// ```dart
 /// class MyDemo extends StatelessWidget {
 ///   final List<Tab> myTabs = <Tab>[
@@ -270,7 +288,13 @@ class _TabControllerScope extends InheritedWidget {
 ///         ),
 ///         body: TabBarView(
 ///           children: myTabs.map((Tab tab) {
-///             return Center(child: Text(tab.text));
+///             final String label = tab.text.toLowerCase();
+///             return Center(
+///               child: Text(
+///                 'This is the $label tab',
+///                 style: const TextStyle(fontSize: 36),
+///               ),
+///             );
 ///           }).toList(),
 ///         ),
 ///       ),
@@ -292,11 +316,13 @@ class DefaultTabController extends StatefulWidget {
     @required this.child,
   }) : assert(initialIndex != null),
        assert(length >= 0),
-       assert(initialIndex >= 0 && initialIndex < length),
+       assert(length == 0 || (initialIndex >= 0 && initialIndex < length)),
        super(key: key);
 
-  /// The total number of tabs. Typically greater than one. Must match
-  /// [TabBar.tabs]'s and [TabBarView.children]'s length.
+  /// The total number of tabs.
+  ///
+  /// Typically greater than one. Must match [TabBar.tabs]'s and
+  /// [TabBarView.children]'s length.
   final int length;
 
   /// The initial index of the selected tab.
@@ -313,13 +339,15 @@ class DefaultTabController extends StatefulWidget {
 
   /// The closest instance of this class that encloses the given context.
   ///
-  /// Typical usage:
+  /// {@tool snippet}
+  /// Typical usage is as follows:
   ///
   /// ```dart
-  /// TabController controller = DefaultTabBarController.of(context);
+  /// TabController controller = DefaultTabController.of(context);
   /// ```
+  /// {@end-tool}
   static TabController of(BuildContext context) {
-    final _TabControllerScope scope = context.inheritFromWidgetOfExactType(_TabControllerScope);
+    final _TabControllerScope scope = context.dependOnInheritedWidgetOfExactType<_TabControllerScope>();
     return scope?.controller;
   }
 

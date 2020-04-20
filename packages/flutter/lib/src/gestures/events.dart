@@ -1,28 +1,42 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:ui' show Offset, PointerDeviceKind;
 
 import 'package:flutter/foundation.dart';
+import 'package:vector_math/vector_math_64.dart';
 
 export 'dart:ui' show Offset, PointerDeviceKind;
 
-/// The bit of [PointerEvent.buttons] that corresponds to the "primary
-/// action" on any device.
+/// The bit of [PointerEvent.buttons] that corresponds to a cross-device
+/// behavior of "primary operation".
 ///
-/// More specifially,
+/// More specifically, it includes:
 ///
-///  * For touch screen, it's when the pointer contacts the screen.
-///  * For stylus and inverted stylus, it's when the pen contacts the screen.
-///  * For mouse, it's when the primary button is pressed.
+///  * [kTouchContact]: The pointer contacts the touch screen.
+///  * [kStylusContact]: The stylus contacts the screen.
+///  * [kPrimaryMouseButton]: The primary mouse button.
 ///
 /// See also:
 ///
-///  * [kTouchContact]: an alias of this constant when used by touch screen.
-///  * [kStylusContact]: an alias of this constant when used by stylus.
-///  * [kPrimaryMouseButton]: an alias of this constant when used by mouse.
+///  * [kSecondaryButton], which describes a cross-device behavior of
+///    "secondary operation".
 const int kPrimaryButton = 0x01;
+
+/// The bit of [PointerEvent.buttons] that corresponds to a cross-device
+/// behavior of "secondary operation".
+///
+/// It is equivalent to:
+///
+///  * [kPrimaryStylusButton]: The stylus contacts the screen.
+///  * [kSecondaryMouseButton]: The primary mouse button.
+///
+/// See also:
+///
+///  * [kPrimaryButton], which describes a cross-device behavior of
+///    "primary operation".
+const int kSecondaryButton = 0x02;
 
 /// The bit of [PointerEvent.buttons] that corresponds to the primary mouse button.
 ///
@@ -31,28 +45,40 @@ const int kPrimaryButton = 0x01;
 ///
 /// See also:
 ///
-///  * [kTouchContact]: an alias of this constant when used by touch screen.
+///  * [kPrimaryButton], which has the same value but describes its cross-device
+///    concept.
 const int kPrimaryMouseButton = kPrimaryButton;
 
 /// The bit of [PointerEvent.buttons] that corresponds to the secondary mouse button.
 ///
 /// The secondary mouse button is typically the right button on the top of the
 /// mouse but can be reconfigured to be a different physical button.
-const int kSecondaryMouseButton = 0x02;
+///
+/// See also:
+///
+///  * [kSecondaryButton], which has the same value but describes its cross-device
+///    concept.
+const int kSecondaryMouseButton = kSecondaryButton;
 
 /// The bit of [PointerEvent.buttons] that corresponds to when a stylus
 /// contacting the screen.
 ///
 /// See also:
 ///
-///  * [kPrimaryButton]: an alias of this constant for any device.
+///  * [kPrimaryButton], which has the same value but describes its cross-device
+///    concept.
 const int kStylusContact = kPrimaryButton;
 
 /// The bit of [PointerEvent.buttons] that corresponds to the primary stylus button.
 ///
 /// The primary stylus button is typically the top of the stylus and near the
 /// tip but can be reconfigured to be a different physical button.
-const int kPrimaryStylusButton = 0x02;
+///
+/// See also:
+///
+///  * [kSecondaryButton], which has the same value but describes its cross-device
+///    concept.
+const int kPrimaryStylusButton = kSecondaryButton;
 
 /// The bit of [PointerEvent.buttons] that corresponds to the middle mouse button.
 ///
@@ -84,12 +110,14 @@ const int kForwardMouseButton = 0x10;
 ///
 /// See also:
 ///
-///  * [kPrimaryButton]: an alias of this constant for any device.
+///  * [kPrimaryButton], which has the same value but describes its cross-device
+///    concept.
 const int kTouchContact = kPrimaryButton;
 
 /// The bit of [PointerEvent.buttons] that corresponds to the nth mouse button.
 ///
-/// The `number` argument can be at most 62.
+/// The `number` argument can be at most 62 in Flutter for mobile and desktop,
+/// and at most 32 on Flutter for web.
 ///
 /// See [kPrimaryMouseButton], [kSecondaryMouseButton], [kMiddleMouseButton],
 /// [kBackMouseButton], and [kForwardMouseButton] for semantic names for some
@@ -98,11 +126,53 @@ int nthMouseButton(int number) => (kPrimaryMouseButton << (number - 1)) & kMaxUn
 
 /// The bit of [PointerEvent.buttons] that corresponds to the nth stylus button.
 ///
-/// The `number` argument can be at most 62.
+/// The `number` argument can be at most 62 in Flutter for mobile and desktop,
+/// and at most 32 on Flutter for web.
 ///
 /// See [kPrimaryStylusButton] and [kSecondaryStylusButton] for semantic names
 /// for some stylus buttons.
 int nthStylusButton(int number) => (kPrimaryStylusButton << (number - 1)) & kMaxUnsignedSMI;
+
+/// Returns the button of `buttons` with the smallest integer.
+///
+/// The `buttons` parameter is a bit field where each set bit represents a button.
+/// This function returns the set bit closest to the least significant bit.
+///
+/// It returns zero when `buttons` is zero.
+///
+/// Example:
+///
+/// ```dart
+///   assert(rightmostButton(0x1) == 0x1);
+///   assert(rightmostButton(0x11) == 0x1);
+///   assert(rightmostButton(0) == 0);
+/// ```
+///
+/// See also:
+///
+///  * [isSingleButton], which checks if a `buttons` contains exactly one button.
+int smallestButton(int buttons) => buttons & (-buttons);
+
+/// Returns whether `buttons` contains one and only one button.
+///
+/// The `buttons` parameter is a bit field where each set bit represents a button.
+/// This function returns whether there is only one set bit in the given integer.
+///
+/// It returns false when `buttons` is zero.
+///
+/// Example:
+///
+/// ```dart
+///   assert(isSingleButton(0x1) == true);
+///   assert(isSingleButton(0x11) == false);
+///   assert(isSingleButton(0) == false);
+/// ```
+///
+/// See also:
+///
+///  * [smallestButton], which returns the button in a `buttons` bit field with
+///    the smallest integer button.
+bool isSingleButton(int buttons) => buttons != 0 && (smallestButton(buttons) == buttons);
 
 /// Base class for touch, stylus, or mouse events.
 ///
@@ -126,7 +196,7 @@ int nthStylusButton(int number) => (kPrimaryStylusButton << (number - 1)) & kMax
 ///
 ///  * [Window.devicePixelRatio], which defines the device's current resolution.
 @immutable
-abstract class PointerEvent extends Diagnosticable {
+abstract class PointerEvent with Diagnosticable {
   /// Abstract const constructor. This constructor enables subclasses to provide
   /// const constructors so that they can be used in const expressions.
   const PointerEvent({
@@ -135,7 +205,9 @@ abstract class PointerEvent extends Diagnosticable {
     this.kind = PointerDeviceKind.touch,
     this.device = 0,
     this.position = Offset.zero,
+    Offset localPosition,
     this.delta = Offset.zero,
+    Offset localDelta,
     this.buttons = 0,
     this.down = false,
     this.obscured = false,
@@ -153,7 +225,11 @@ abstract class PointerEvent extends Diagnosticable {
     this.tilt = 0.0,
     this.platformData = 0,
     this.synthesized = false,
-  });
+    this.transform,
+    this.original,
+  }) : localPosition = localPosition ?? position,
+       localDelta = localDelta ?? delta;
+
 
   /// Time of event dispatch, relative to an arbitrary timeline.
   final Duration timeStamp;
@@ -170,13 +246,44 @@ abstract class PointerEvent extends Diagnosticable {
 
   /// Coordinate of the position of the pointer, in logical pixels in the global
   /// coordinate space.
+  ///
+  /// See also:
+  ///
+  ///  * [localPosition], which is the [position] transformed into the local
+  ///    coordinate system of the event receiver.
   final Offset position;
 
+  /// The [position] transformed into the event receiver's local coordinate
+  /// system according to [transform].
+  ///
+  /// If this event has not been transformed, [position] is returned as-is.
+  /// See also:
+  ///
+  ///  * [position], which is the position in the global coordinate system of
+  ///    the screen.
+  final Offset localPosition;
+
   /// Distance in logical pixels that the pointer moved since the last
-  /// [PointerMoveEvent].
+  /// [PointerMoveEvent] or [PointerHoverEvent].
   ///
   /// This value is always 0.0 for down, up, and cancel events.
+  ///
+  /// See also:
+  ///
+  ///  * [localDelta], which is the [delta] transformed into the local
+  ///    coordinate space of the event receiver.
   final Offset delta;
+
+  /// The [delta] transformed into the event receiver's local coordinate
+  /// system according to [transform].
+  ///
+  /// If this event has not been transformed, [delta] is returned as-is.
+  ///
+  /// See also:
+  ///
+  ///  * [delta], which is the distance the pointer moved in the global
+  ///    coordinate system of the screen.
+  final Offset localDelta;
 
   /// Bit field using the *Button constants such as [kPrimaryMouseButton],
   /// [kSecondaryStylusButton], etc.
@@ -259,7 +366,7 @@ abstract class PointerEvent extends Diagnosticable {
   /// for this pointer, in logical pixels.
   final double radiusMin;
 
-  /// The minimum value that could be reported for [radiusMajor] and [radiusMinor]
+  /// The maximum value that could be reported for [radiusMajor] and [radiusMinor]
   /// for this pointer, in logical pixels.
   final double radiusMax;
 
@@ -312,7 +419,7 @@ abstract class PointerEvent extends Diagnosticable {
   /// Set if the event was synthesized by Flutter.
   ///
   /// We occasionally synthesize PointerEvents that aren't exact translations
-  /// of [ui.PointerData] from the engine to cover small cross-OS discrepancies
+  /// of [PointerData] from the engine to cover small cross-OS discrepancies
   /// in pointer behaviors.
   ///
   /// For instance, on end events, Android always drops any location changes
@@ -323,11 +430,56 @@ abstract class PointerEvent extends Diagnosticable {
   /// the difference between the 2 events in that case.
   final bool synthesized;
 
+  /// The transformation used to transform this event from the global coordinate
+  /// space into the coordinate space of the event receiver.
+  ///
+  /// This value affects what is returned by [localPosition] and [localDelta].
+  /// If this value is null, it is treated as the identity transformation.
+  ///
+  /// Unlike a paint transform, this transform usually does not contain any
+  /// "perspective" components, meaning that the third row and the third column
+  /// of the matrix should be equal to "0, 0, 1, 0". This ensures that
+  /// [localPosition] describes the point in the local coordinate system of the
+  /// event receiver at which the user is actually touching the screen.
+  ///
+  /// See also:
+  ///
+  ///  * [transformed], which transforms this event into a different coordinate
+  ///    space.
+  final Matrix4 transform;
+
+  /// The original un-transformed [PointerEvent] before any [transform]s were
+  /// applied.
+  ///
+  /// If [transform] is null or the identity transformation this may be null.
+  ///
+  /// When multiple event receivers in different coordinate spaces receive an
+  /// event, they all receive the event transformed to their local coordinate
+  /// space. The [original] property can be used to determine if all those
+  /// transformed events actually originated from the same pointer interaction.
+  final PointerEvent original;
+
+  /// Transforms the event from the global coordinate space into the coordinate
+  /// space of an event receiver.
+  ///
+  /// The coordinate space of the event receiver is described by `transform`. A
+  /// null value for `transform` is treated as the identity transformation.
+  ///
+  /// The method may return the same object instance if for example the
+  /// transformation has no effect on the event.
+  ///
+  /// Transforms are not commutative. If this method is called on a
+  /// [PointerEvent] that has a non-null [transform] value, that value will be
+  /// overridden by the provided `transform`.
+  PointerEvent transformed(Matrix4 transform);
+
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties.add(DiagnosticsProperty<Offset>('position', position));
+    properties.add(DiagnosticsProperty<Offset>('localPosition', localPosition, defaultValue: position, level: DiagnosticLevel.debug));
     properties.add(DiagnosticsProperty<Offset>('delta', delta, defaultValue: Offset.zero, level: DiagnosticLevel.debug));
+    properties.add(DiagnosticsProperty<Offset>('localDelta', localDelta, defaultValue: delta, level: DiagnosticLevel.debug));
     properties.add(DiagnosticsProperty<Duration>('timeStamp', timeStamp, defaultValue: Duration.zero, level: DiagnosticLevel.debug));
     properties.add(IntProperty('pointer', pointer, level: DiagnosticLevel.debug));
     properties.add(EnumProperty<PointerDeviceKind>('kind', kind, level: DiagnosticLevel.debug));
@@ -356,6 +508,61 @@ abstract class PointerEvent extends Diagnosticable {
   String toStringFull() {
     return toString(minLevel: DiagnosticLevel.fine);
   }
+
+  /// Returns the transformation of `position` into the coordinate system
+  /// described by `transform`.
+  ///
+  /// The z-value of `position` is assumed to be 0.0. If `transform` is null,
+  /// `position` is returned as-is.
+  static Offset transformPosition(Matrix4 transform, Offset position) {
+    if (transform == null) {
+      return position;
+    }
+    final Vector3 position3 = Vector3(position.dx, position.dy, 0.0);
+    final Vector3 transformed3 = transform.perspectiveTransform(position3);
+    return Offset(transformed3.x, transformed3.y);
+  }
+
+  /// Transforms `untransformedDelta` into the coordinate system described by
+  /// `transform`.
+  ///
+  /// It uses the provided `untransformedEndPosition` and
+  /// `transformedEndPosition` of the provided delta to increase accuracy.
+  ///
+  /// If `transform` is null, `untransformedDelta` is returned.
+  static Offset transformDeltaViaPositions({
+    @required Offset untransformedEndPosition,
+    Offset transformedEndPosition,
+    @required Offset untransformedDelta,
+    @required Matrix4 transform,
+  }) {
+    if (transform == null) {
+      return untransformedDelta;
+    }
+    // We could transform the delta directly with the transformation matrix.
+    // While that is mathematically equivalent, in practice we are seeing a
+    // greater precision error with that approach. Instead, we are transforming
+    // start and end point of the delta separately and calculate the delta in
+    // the new space for greater accuracy.
+    transformedEndPosition ??= transformPosition(transform, untransformedEndPosition);
+    final Offset transformedStartPosition = transformPosition(transform, untransformedEndPosition - untransformedDelta);
+    return transformedEndPosition - transformedStartPosition;
+  }
+
+  /// Removes the "perspective" component from `transform`.
+  ///
+  /// When applying the resulting transform matrix to a point with a
+  /// z-coordinate of zero (which is generally assumed for all points
+  /// represented by an [Offset]), the other coordinates will get transformed as
+  /// before, but the new z-coordinate is going to be zero again. This is
+  /// achieved by setting the third column and third row of the matrix to
+  /// "0, 0, 1, 0".
+  static Matrix4 removePerspectiveTransform(Matrix4 transform) {
+    final Vector4 vector = Vector4(0, 0, 1, 0);
+    return transform.clone()
+      ..setColumn(2, vector)
+      ..setRow(2, vector);
+  }
 }
 
 /// The device has started tracking the pointer.
@@ -371,6 +578,7 @@ class PointerAddedEvent extends PointerEvent {
     PointerDeviceKind kind = PointerDeviceKind.touch,
     int device = 0,
     Offset position = Offset.zero,
+    Offset localPosition,
     bool obscured = false,
     double pressureMin = 1.0,
     double pressureMax = 1.0,
@@ -380,11 +588,14 @@ class PointerAddedEvent extends PointerEvent {
     double radiusMax = 0.0,
     double orientation = 0.0,
     double tilt = 0.0,
+    Matrix4 transform,
+    PointerAddedEvent original,
   }) : super(
          timeStamp: timeStamp,
          kind: kind,
          device: device,
          position: position,
+         localPosition: localPosition,
          obscured: obscured,
          pressure: 0.0,
          pressureMin: pressureMin,
@@ -395,7 +606,34 @@ class PointerAddedEvent extends PointerEvent {
          radiusMax: radiusMax,
          orientation: orientation,
          tilt: tilt,
+         transform: transform,
+         original: original,
        );
+
+  @override
+  PointerAddedEvent transformed(Matrix4 transform) {
+    if (transform == null || transform == this.transform) {
+      return this;
+    }
+    return PointerAddedEvent(
+      timeStamp: timeStamp,
+      kind: kind,
+      device: device,
+      position: position,
+      localPosition: PointerEvent.transformPosition(transform, position),
+      obscured: obscured,
+      pressureMin: pressureMin,
+      pressureMax: pressureMax,
+      distance: distance,
+      distanceMax: distanceMax,
+      radiusMin: radiusMin,
+      radiusMax: radiusMax,
+      orientation: orientation,
+      tilt: tilt,
+      transform: transform,
+      original: original as PointerAddedEvent ?? this,
+    );
+  }
 }
 
 /// The device is no longer tracking the pointer.
@@ -410,17 +648,22 @@ class PointerRemovedEvent extends PointerEvent {
     Duration timeStamp = Duration.zero,
     PointerDeviceKind kind = PointerDeviceKind.touch,
     int device = 0,
+    Offset position = Offset.zero,
+    Offset localPosition,
     bool obscured = false,
     double pressureMin = 1.0,
     double pressureMax = 1.0,
     double distanceMax = 0.0,
     double radiusMin = 0.0,
     double radiusMax = 0.0,
+    Matrix4 transform,
+    PointerRemovedEvent original,
   }) : super(
          timeStamp: timeStamp,
          kind: kind,
          device: device,
-         position: null,
+         position: position,
+         localPosition: localPosition,
          obscured: obscured,
          pressure: 0.0,
          pressureMin: pressureMin,
@@ -428,7 +671,31 @@ class PointerRemovedEvent extends PointerEvent {
          distanceMax: distanceMax,
          radiusMin: radiusMin,
          radiusMax: radiusMax,
+         transform: transform,
+         original: original,
        );
+
+  @override
+  PointerRemovedEvent transformed(Matrix4 transform) {
+    if (transform == null || transform == this.transform) {
+      return this;
+    }
+    return PointerRemovedEvent(
+      timeStamp: timeStamp,
+      kind: kind,
+      device: device,
+      position: position,
+      localPosition: PointerEvent.transformPosition(transform, position),
+      obscured: obscured,
+      pressureMin: pressureMin,
+      pressureMax: pressureMax,
+      distanceMax: distanceMax,
+      radiusMin: radiusMin,
+      radiusMax: radiusMax,
+      transform: transform,
+      original: original as PointerRemovedEvent ?? this,
+    );
+  }
 }
 
 /// The pointer has moved with respect to the device while the pointer is not
@@ -450,7 +717,9 @@ class PointerHoverEvent extends PointerEvent {
     PointerDeviceKind kind = PointerDeviceKind.touch,
     int device = 0,
     Offset position = Offset.zero,
+    Offset localPosition,
     Offset delta = Offset.zero,
+    Offset localDelta,
     int buttons = 0,
     bool obscured = false,
     double pressureMin = 1.0,
@@ -465,12 +734,16 @@ class PointerHoverEvent extends PointerEvent {
     double orientation = 0.0,
     double tilt = 0.0,
     bool synthesized = false,
+    Matrix4 transform,
+    PointerHoverEvent original,
   }) : super(
          timeStamp: timeStamp,
          kind: kind,
          device: device,
          position: position,
+         localPosition: localPosition,
          delta: delta,
+         localDelta: localDelta,
          buttons: buttons,
          down: false,
          obscured: obscured,
@@ -487,11 +760,51 @@ class PointerHoverEvent extends PointerEvent {
          orientation: orientation,
          tilt: tilt,
          synthesized: synthesized,
+         transform: transform,
+         original: original,
        );
+
+  @override
+  PointerHoverEvent transformed(Matrix4 transform) {
+    if (transform == null || transform == this.transform) {
+      return this;
+    }
+    final Offset transformedPosition = PointerEvent.transformPosition(transform, position);
+    return PointerHoverEvent(
+      timeStamp: timeStamp,
+      kind: kind,
+      device: device,
+      position: position,
+      localPosition: transformedPosition,
+      delta: delta,
+      localDelta: PointerEvent.transformDeltaViaPositions(
+        transform: transform,
+        untransformedDelta: delta,
+        untransformedEndPosition: position,
+        transformedEndPosition: transformedPosition,
+      ),
+      buttons: buttons,
+      obscured: obscured,
+      pressureMin: pressureMin,
+      pressureMax: pressureMax,
+      distance: distance,
+      distanceMax: distanceMax,
+      size: size,
+      radiusMajor: radiusMajor,
+      radiusMinor: radiusMinor,
+      radiusMin: radiusMin,
+      radiusMax: radiusMax,
+      orientation: orientation,
+      tilt: tilt,
+      synthesized: synthesized,
+      transform: transform,
+      original: original as PointerHoverEvent ?? this,
+    );
+  }
 }
 
-/// The pointer has moved with respect to the device while the pointer is not
-/// in contact with the device, and it has entered a target object.
+/// The pointer has moved with respect to the device while the pointer is or is
+/// not in contact with the device, and it has entered a target object.
 ///
 /// See also:
 ///
@@ -509,7 +822,9 @@ class PointerEnterEvent extends PointerEvent {
     PointerDeviceKind kind = PointerDeviceKind.touch,
     int device = 0,
     Offset position = Offset.zero,
+    Offset localPosition,
     Offset delta = Offset.zero,
+    Offset localDelta,
     int buttons = 0,
     bool obscured = false,
     double pressureMin = 1.0,
@@ -523,15 +838,20 @@ class PointerEnterEvent extends PointerEvent {
     double radiusMax = 0.0,
     double orientation = 0.0,
     double tilt = 0.0,
+    bool down = false,
     bool synthesized = false,
+    Matrix4 transform,
+    PointerEnterEvent original,
   }) : super(
          timeStamp: timeStamp,
          kind: kind,
          device: device,
          position: position,
+         localPosition: localPosition,
          delta: delta,
+         localDelta: localDelta,
          buttons: buttons,
-         down: false,
+         down: down,
          obscured: obscured,
          pressure: 0.0,
          pressureMin: pressureMin,
@@ -546,12 +866,17 @@ class PointerEnterEvent extends PointerEvent {
          orientation: orientation,
          tilt: tilt,
          synthesized: synthesized,
+         transform: transform,
+         original: original,
        );
 
   /// Creates an enter event from a [PointerHoverEvent].
   ///
   /// Deprecated. Please use [PointerEnterEvent.fromMouseEvent] instead.
-  @Deprecated('use PointerEnterEvent.fromMouseEvent instead')
+  @Deprecated(
+    'Use PointerEnterEvent.fromMouseEvent instead. '
+    'This feature was deprecated after v1.4.3.'
+  )
   PointerEnterEvent.fromHoverEvent(PointerHoverEvent event) : this.fromMouseEvent(event);
 
   /// Creates an enter event from a [PointerEvent].
@@ -562,7 +887,9 @@ class PointerEnterEvent extends PointerEvent {
     kind: event?.kind,
     device: event?.device,
     position: event?.position,
+    localPosition: event?.localPosition,
     delta: event?.delta,
+    localDelta: event?.localDelta,
     buttons: event?.buttons,
     obscured: event?.obscured,
     pressureMin: event?.pressureMin,
@@ -576,12 +903,54 @@ class PointerEnterEvent extends PointerEvent {
     radiusMax: event?.radiusMax,
     orientation: event?.orientation,
     tilt: event?.tilt,
+    down: event?.down,
     synthesized: event?.synthesized,
+    transform: event?.transform,
+    original: event?.original as PointerEnterEvent,
   );
+
+  @override
+  PointerEnterEvent transformed(Matrix4 transform) {
+    if (transform == null || transform == this.transform) {
+      return this;
+    }
+    final Offset transformedPosition = PointerEvent.transformPosition(transform, position);
+    return PointerEnterEvent(
+      timeStamp: timeStamp,
+      kind: kind,
+      device: device,
+      position: position,
+      localPosition: transformedPosition,
+      delta: delta,
+      localDelta: PointerEvent.transformDeltaViaPositions(
+        transform: transform,
+        untransformedDelta: delta,
+        untransformedEndPosition: position,
+        transformedEndPosition: transformedPosition,
+      ),
+      buttons: buttons,
+      obscured: obscured,
+      pressureMin: pressureMin,
+      pressureMax: pressureMax,
+      distance: distance,
+      distanceMax: distanceMax,
+      size: size,
+      radiusMajor: radiusMajor,
+      radiusMinor: radiusMinor,
+      radiusMin: radiusMin,
+      radiusMax: radiusMax,
+      orientation: orientation,
+      tilt: tilt,
+      down: down,
+      synthesized: synthesized,
+      transform: transform,
+      original: original as PointerEnterEvent ?? this,
+    );
+  }
 }
 
-/// The pointer has moved with respect to the device while the pointer is not
-/// in contact with the device, and entered a target object.
+/// The pointer has moved with respect to the device while the pointer is or is
+/// not in contact with the device, and entered a target object.
 ///
 /// See also:
 ///
@@ -599,7 +968,9 @@ class PointerExitEvent extends PointerEvent {
     PointerDeviceKind kind = PointerDeviceKind.touch,
     int device = 0,
     Offset position = Offset.zero,
+    Offset localPosition,
     Offset delta = Offset.zero,
+    Offset localDelta,
     int buttons = 0,
     bool obscured = false,
     double pressureMin = 1.0,
@@ -613,15 +984,20 @@ class PointerExitEvent extends PointerEvent {
     double radiusMax = 0.0,
     double orientation = 0.0,
     double tilt = 0.0,
+    bool down = false,
     bool synthesized = false,
+    Matrix4 transform,
+    PointerExitEvent original,
   }) : super(
          timeStamp: timeStamp,
          kind: kind,
          device: device,
          position: position,
+         localPosition: localPosition,
          delta: delta,
+         localDelta: localDelta,
          buttons: buttons,
-         down: false,
+         down: down,
          obscured: obscured,
          pressure: 0.0,
          pressureMin: pressureMin,
@@ -636,12 +1012,17 @@ class PointerExitEvent extends PointerEvent {
          orientation: orientation,
          tilt: tilt,
          synthesized: synthesized,
+         transform: transform,
+         original: original,
        );
 
   /// Creates an exit event from a [PointerHoverEvent].
   ///
   /// Deprecated. Please use [PointerExitEvent.fromMouseEvent] instead.
-  @Deprecated('use PointerExitEvent.fromMouseEvent instead')
+  @Deprecated(
+    'Use PointerExitEvent.fromMouseEvent instead. '
+    'This feature was deprecated after v1.4.3.'
+  )
   PointerExitEvent.fromHoverEvent(PointerHoverEvent event) : this.fromMouseEvent(event);
 
   /// Creates an exit event from a [PointerEvent].
@@ -652,7 +1033,9 @@ class PointerExitEvent extends PointerEvent {
     kind: event?.kind,
     device: event?.device,
     position: event?.position,
+    localPosition: event?.localPosition,
     delta: event?.delta,
+    localDelta: event?.localDelta,
     buttons: event?.buttons,
     obscured: event?.obscured,
     pressureMin: event?.pressureMin,
@@ -666,8 +1049,50 @@ class PointerExitEvent extends PointerEvent {
     radiusMax: event?.radiusMax,
     orientation: event?.orientation,
     tilt: event?.tilt,
+    down: event?.down,
     synthesized: event?.synthesized,
+    transform: event?.transform,
+    original: event?.original as PointerExitEvent,
   );
+
+  @override
+  PointerExitEvent transformed(Matrix4 transform) {
+    if (transform == null || transform == this.transform) {
+      return this;
+    }
+    final Offset transformedPosition = PointerEvent.transformPosition(transform, position);
+    return PointerExitEvent(
+      timeStamp: timeStamp,
+      kind: kind,
+      device: device,
+      position: position,
+      localPosition: transformedPosition,
+      delta: delta,
+      localDelta: PointerEvent.transformDeltaViaPositions(
+        transform: transform,
+        untransformedDelta: delta,
+        untransformedEndPosition: position,
+        transformedEndPosition: transformedPosition,
+      ),
+      buttons: buttons,
+      obscured: obscured,
+      pressureMin: pressureMin,
+      pressureMax: pressureMax,
+      distance: distance,
+      distanceMax: distanceMax,
+      size: size,
+      radiusMajor: radiusMajor,
+      radiusMinor: radiusMinor,
+      radiusMin: radiusMin,
+      radiusMax: radiusMax,
+      orientation: orientation,
+      tilt: tilt,
+      down: down,
+      synthesized: synthesized,
+      transform: transform,
+      original: original as PointerExitEvent ?? this,
+    );
+  }
 }
 
 /// The pointer has made contact with the device.
@@ -681,6 +1106,7 @@ class PointerDownEvent extends PointerEvent {
     PointerDeviceKind kind = PointerDeviceKind.touch,
     int device = 0,
     Offset position = Offset.zero,
+    Offset localPosition,
     int buttons = kPrimaryButton,
     bool obscured = false,
     double pressure = 1.0,
@@ -694,12 +1120,15 @@ class PointerDownEvent extends PointerEvent {
     double radiusMax = 0.0,
     double orientation = 0.0,
     double tilt = 0.0,
+    Matrix4 transform,
+    PointerDownEvent original,
   }) : super(
          timeStamp: timeStamp,
          pointer: pointer,
          kind: kind,
          device: device,
          position: position,
+         localPosition: localPosition,
          buttons: buttons,
          down: true,
          obscured: obscured,
@@ -715,7 +1144,39 @@ class PointerDownEvent extends PointerEvent {
          radiusMax: radiusMax,
          orientation: orientation,
          tilt: tilt,
+         transform: transform,
+         original: original,
        );
+
+  @override
+  PointerDownEvent transformed(Matrix4 transform) {
+    if (transform == null || transform == this.transform) {
+      return this;
+    }
+    return PointerDownEvent(
+      timeStamp: timeStamp,
+      pointer: pointer,
+      kind: kind,
+      device: device,
+      position: position,
+      localPosition: PointerEvent.transformPosition(transform, position),
+      buttons: buttons,
+      obscured: obscured,
+      pressure: pressure,
+      pressureMin: pressureMin,
+      pressureMax: pressureMax,
+      distanceMax: distanceMax,
+      size: size,
+      radiusMajor: radiusMajor,
+      radiusMinor: radiusMinor,
+      radiusMin: radiusMin,
+      radiusMax: radiusMax,
+      orientation: orientation,
+      tilt: tilt,
+      transform: transform,
+      original: original as PointerDownEvent ?? this,
+    );
+  }
 }
 
 /// The pointer has moved with respect to the device while the pointer is in
@@ -735,7 +1196,9 @@ class PointerMoveEvent extends PointerEvent {
     PointerDeviceKind kind = PointerDeviceKind.touch,
     int device = 0,
     Offset position = Offset.zero,
+    Offset localPosition,
     Offset delta = Offset.zero,
+    Offset localDelta,
     int buttons = kPrimaryButton,
     bool obscured = false,
     double pressure = 1.0,
@@ -751,13 +1214,17 @@ class PointerMoveEvent extends PointerEvent {
     double tilt = 0.0,
     int platformData = 0,
     bool synthesized = false,
+    Matrix4 transform,
+    PointerMoveEvent original,
   }) : super(
          timeStamp: timeStamp,
          pointer: pointer,
          kind: kind,
          device: device,
          position: position,
+         localPosition: localPosition,
          delta: delta,
+         localDelta: localDelta,
          buttons: buttons,
          down: true,
          obscured: obscured,
@@ -775,7 +1242,50 @@ class PointerMoveEvent extends PointerEvent {
          tilt: tilt,
          platformData: platformData,
          synthesized: synthesized,
+         transform: transform,
+         original: original,
        );
+
+  @override
+  PointerMoveEvent transformed(Matrix4 transform) {
+    if (transform == null || transform == this.transform) {
+      return this;
+    }
+    final Offset transformedPosition = PointerEvent.transformPosition(transform, position);
+
+    return PointerMoveEvent(
+      timeStamp: timeStamp,
+      pointer: pointer,
+      kind: kind,
+      device: device,
+      position: position,
+      localPosition: transformedPosition,
+      delta: delta,
+      localDelta: PointerEvent.transformDeltaViaPositions(
+        transform: transform,
+        untransformedDelta: delta,
+        untransformedEndPosition: position,
+        transformedEndPosition: transformedPosition,
+      ),
+      buttons: buttons,
+      obscured: obscured,
+      pressure: pressure,
+      pressureMin: pressureMin,
+      pressureMax: pressureMax,
+      distanceMax: distanceMax,
+      size: size,
+      radiusMajor: radiusMajor,
+      radiusMinor: radiusMinor,
+      radiusMin: radiusMin,
+      radiusMax: radiusMax,
+      orientation: orientation,
+      tilt: tilt,
+      platformData: platformData,
+      synthesized: synthesized,
+      transform: transform,
+      original: original as PointerMoveEvent ?? this,
+    );
+  }
 }
 
 /// The pointer has stopped making contact with the device.
@@ -789,6 +1299,7 @@ class PointerUpEvent extends PointerEvent {
     PointerDeviceKind kind = PointerDeviceKind.touch,
     int device = 0,
     Offset position = Offset.zero,
+    Offset localPosition,
     int buttons = 0,
     bool obscured = false,
     // Allow pressure customization here because PointerUpEvent can contain
@@ -805,12 +1316,15 @@ class PointerUpEvent extends PointerEvent {
     double radiusMax = 0.0,
     double orientation = 0.0,
     double tilt = 0.0,
+    Matrix4 transform,
+    PointerUpEvent original,
   }) : super(
          timeStamp: timeStamp,
          pointer: pointer,
          kind: kind,
          device: device,
          position: position,
+         localPosition: localPosition,
          buttons: buttons,
          down: false,
          obscured: obscured,
@@ -826,7 +1340,40 @@ class PointerUpEvent extends PointerEvent {
          radiusMax: radiusMax,
          orientation: orientation,
          tilt: tilt,
+         transform: transform,
+         original: original,
        );
+
+  @override
+  PointerUpEvent transformed(Matrix4 transform) {
+    if (transform == null || transform == this.transform) {
+      return this;
+    }
+    return PointerUpEvent(
+      timeStamp: timeStamp,
+      pointer: pointer,
+      kind: kind,
+      device: device,
+      position: position,
+      localPosition: PointerEvent.transformPosition(transform, position),
+      buttons: buttons,
+      obscured: obscured,
+      pressure: pressure,
+      pressureMin: pressureMin,
+      pressureMax: pressureMax,
+      distance: distance,
+      distanceMax: distanceMax,
+      size: size,
+      radiusMajor: radiusMajor,
+      radiusMinor: radiusMinor,
+      radiusMin: radiusMin,
+      radiusMax: radiusMax,
+      orientation: orientation,
+      tilt: tilt,
+      transform: transform,
+      original: original as PointerUpEvent ?? this,
+    );
+  }
 }
 
 /// An event that corresponds to a discrete pointer signal.
@@ -843,12 +1390,18 @@ abstract class PointerSignalEvent extends PointerEvent {
     PointerDeviceKind kind = PointerDeviceKind.mouse,
     int device = 0,
     Offset position = Offset.zero,
+    Offset localPosition,
+    Matrix4 transform,
+    PointerSignalEvent original,
   }) : super(
          timeStamp: timeStamp,
          pointer: pointer,
          kind: kind,
          device: device,
          position: position,
+         localPosition: localPosition,
+         transform: transform,
+         original: original,
        );
 }
 
@@ -865,7 +1418,10 @@ class PointerScrollEvent extends PointerSignalEvent {
     PointerDeviceKind kind = PointerDeviceKind.mouse,
     int device = 0,
     Offset position = Offset.zero,
+    Offset localPosition,
     this.scrollDelta = Offset.zero,
+    Matrix4 transform,
+    PointerScrollEvent original,
   }) : assert(timeStamp != null),
        assert(kind != null),
        assert(device != null),
@@ -876,10 +1432,30 @@ class PointerScrollEvent extends PointerSignalEvent {
          kind: kind,
          device: device,
          position: position,
+         localPosition: localPosition,
+         transform: transform,
+         original: original,
        );
 
   /// The amount to scroll, in logical pixels.
   final Offset scrollDelta;
+
+  @override
+  PointerScrollEvent transformed(Matrix4 transform) {
+    if (transform == null || transform == this.transform) {
+      return this;
+    }
+    return PointerScrollEvent(
+      timeStamp: timeStamp,
+      kind: kind,
+      device: device,
+      position: position,
+      localPosition: PointerEvent.transformPosition(transform, position),
+      scrollDelta: scrollDelta,
+      transform: transform,
+      original: original as PointerScrollEvent ?? this,
+    );
+  }
 
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
@@ -899,6 +1475,7 @@ class PointerCancelEvent extends PointerEvent {
     PointerDeviceKind kind = PointerDeviceKind.touch,
     int device = 0,
     Offset position = Offset.zero,
+    Offset localPosition,
     int buttons = 0,
     bool obscured = false,
     double pressureMin = 1.0,
@@ -912,12 +1489,15 @@ class PointerCancelEvent extends PointerEvent {
     double radiusMax = 0.0,
     double orientation = 0.0,
     double tilt = 0.0,
+    Matrix4 transform,
+    PointerCancelEvent original,
   }) : super(
          timeStamp: timeStamp,
          pointer: pointer,
          kind: kind,
          device: device,
          position: position,
+         localPosition: localPosition,
          buttons: buttons,
          down: false,
          obscured: obscured,
@@ -933,5 +1513,37 @@ class PointerCancelEvent extends PointerEvent {
          radiusMax: radiusMax,
          orientation: orientation,
          tilt: tilt,
+         transform: transform,
+         original: original,
        );
+
+  @override
+  PointerCancelEvent transformed(Matrix4 transform) {
+    if (transform == null || transform == this.transform) {
+      return this;
+    }
+    return PointerCancelEvent(
+      timeStamp: timeStamp,
+      pointer: pointer,
+      kind: kind,
+      device: device,
+      position: position,
+      localPosition: PointerEvent.transformPosition(transform, position),
+      buttons: buttons,
+      obscured: obscured,
+      pressureMin: pressureMin,
+      pressureMax: pressureMax,
+      distance: distance,
+      distanceMax: distanceMax,
+      size: size,
+      radiusMajor: radiusMajor,
+      radiusMinor: radiusMinor,
+      radiusMin: radiusMin,
+      radiusMax: radiusMax,
+      orientation: orientation,
+      tilt: tilt,
+      transform: transform,
+      original: original as PointerCancelEvent ?? this,
+    );
+  }
 }

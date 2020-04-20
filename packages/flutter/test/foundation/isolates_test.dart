@@ -1,6 +1,8 @@
-// Copyright 2018 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+@TestOn('!chrome') // isolates not supported on the web.
 
 import 'package:flutter/foundation.dart';
 
@@ -25,9 +27,9 @@ Future<int> test2Async(int value) async {
 void main() {
   test('compute()', () async {
     expect(await compute(test1, 0), 1);
-    expect(compute(test2, 0), throwsA(isInstanceOf<Exception>()));
+    expect(compute(test2, 0), throwsException);
 
     expect(await compute(test1Async, 0), 1);
-    expect(compute(test2Async, 0), throwsA(isInstanceOf<Exception>()));
+    expect(compute(test2Async, 0), throwsException);
   });
 }

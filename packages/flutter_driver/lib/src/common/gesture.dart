@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,14 +14,17 @@ class Tap extends CommandWithTarget {
   Tap.deserialize(Map<String, String> json) : super.deserialize(json);
 
   @override
-  final String kind = 'tap';
+  String get kind => 'tap';
 }
 
 /// The result of a [Tap] command.
 class TapResult extends Result {
+  /// Creates a [TapResult].
+  const TapResult();
+
   /// Deserializes this result from JSON.
   static TapResult fromJson(Map<String, dynamic> json) {
-    return TapResult();
+    return const TapResult();
   }
 
   @override
@@ -63,7 +66,7 @@ class Scroll extends CommandWithTarget {
   final int frequency;
 
   @override
-  final String kind = 'scroll';
+  String get kind => 'scroll';
 
   @override
   Map<String, String> serialize() => super.serialize()..addAll(<String, String>{
@@ -76,9 +79,12 @@ class Scroll extends CommandWithTarget {
 
 /// The result of a [Scroll] command.
 class ScrollResult extends Result {
+  /// Creates a [ScrollResult].
+  const ScrollResult();
+
   /// Deserializes this result from JSON.
   static ScrollResult fromJson(Map<String, dynamic> json) {
-    return ScrollResult();
+    return const ScrollResult();
   }
 
   @override
@@ -106,7 +112,7 @@ class ScrollIntoView extends CommandWithTarget {
   final double alignment;
 
   @override
-  final String kind = 'scrollIntoView';
+  String get kind => 'scrollIntoView';
 
   @override
   Map<String, String> serialize() => super.serialize()..addAll(<String, String>{

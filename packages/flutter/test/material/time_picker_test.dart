@@ -1,7 +1,8 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+@TestOn('!chrome') // entire file needs triage.
 import 'dart:async';
 import 'dart:ui' as ui;
 
@@ -260,6 +261,7 @@ void _tests() {
     WidgetTester tester,
     bool alwaysUse24HourFormat, {
     TimeOfDay initialTime = const TimeOfDay(hour: 7, minute: 0),
+    double textScaleFactor = 1.0,
   }) async {
     await tester.pumpWidget(
       Localizations(
@@ -269,7 +271,10 @@ void _tests() {
           DefaultWidgetsLocalizations.delegate,
         ],
         child: MediaQuery(
-          data: MediaQueryData(alwaysUse24HourFormat: alwaysUse24HourFormat),
+          data: MediaQueryData(
+            alwaysUse24HourFormat: alwaysUse24HourFormat,
+            textScaleFactor: textScaleFactor,
+          ),
           child: Material(
             child: Directionality(
               textDirection: TextDirection.ltr,
@@ -300,12 +305,12 @@ void _tests() {
 
     final CustomPaint dialPaint = tester.widget(findDialPaint);
     final dynamic dialPainter = dialPaint.painter;
-    final List<dynamic> primaryOuterLabels = dialPainter.primaryOuterLabels;
-    expect(primaryOuterLabels.map<String>((dynamic tp) => tp.painter.text.text), labels12To11);
+    final List<dynamic> primaryOuterLabels = dialPainter.primaryOuterLabels as List<dynamic>;
+    expect(primaryOuterLabels.map<String>((dynamic tp) => tp.painter.text.text as String), labels12To11);
     expect(dialPainter.primaryInnerLabels, null);
 
-    final List<dynamic> secondaryOuterLabels = dialPainter.secondaryOuterLabels;
-    expect(secondaryOuterLabels.map<String>((dynamic tp) => tp.painter.text.text), labels12To11);
+    final List<dynamic> secondaryOuterLabels = dialPainter.secondaryOuterLabels as List<dynamic>;
+    expect(secondaryOuterLabels.map<String>((dynamic tp) => tp.painter.text.text as String), labels12To11);
     expect(dialPainter.secondaryInnerLabels, null);
   });
 
@@ -314,15 +319,15 @@ void _tests() {
 
     final CustomPaint dialPaint = tester.widget(findDialPaint);
     final dynamic dialPainter = dialPaint.painter;
-    final List<dynamic> primaryOuterLabels = dialPainter.primaryOuterLabels;
-    expect(primaryOuterLabels.map<String>((dynamic tp) => tp.painter.text.text), labels00To23);
-    final List<dynamic> primaryInnerLabels = dialPainter.primaryInnerLabels;
-    expect(primaryInnerLabels.map<String>((dynamic tp) => tp.painter.text.text), labels12To11TwoDigit);
+    final List<dynamic> primaryOuterLabels = dialPainter.primaryOuterLabels as List<dynamic>;
+    expect(primaryOuterLabels.map<String>((dynamic tp) => tp.painter.text.text as String), labels00To23);
+    final List<dynamic> primaryInnerLabels = dialPainter.primaryInnerLabels as List<dynamic>;
+    expect(primaryInnerLabels.map<String>((dynamic tp) => tp.painter.text.text as String), labels12To11TwoDigit);
 
-    final List<dynamic> secondaryOuterLabels = dialPainter.secondaryOuterLabels;
-    expect(secondaryOuterLabels.map<String>((dynamic tp) => tp.painter.text.text), labels00To23);
-    final List<dynamic> secondaryInnerLabels = dialPainter.secondaryInnerLabels;
-    expect(secondaryInnerLabels.map<String>((dynamic tp) => tp.painter.text.text), labels12To11TwoDigit);
+    final List<dynamic> secondaryOuterLabels = dialPainter.secondaryOuterLabels as List<dynamic>;
+    expect(secondaryOuterLabels.map<String>((dynamic tp) => tp.painter.text.text as String), labels00To23);
+    final List<dynamic> secondaryInnerLabels = dialPainter.secondaryInnerLabels as List<dynamic>;
+    expect(secondaryInnerLabels.map<String>((dynamic tp) => tp.painter.text.text as String), labels12To11TwoDigit);
   });
 
   testWidgets('provides semantics information for AM/PM indicator', (WidgetTester tester) async {
@@ -542,6 +547,38 @@ void _tests() {
     semantics.dispose();
   });
 
+  testWidgets('header touch regions are large enough', (WidgetTester tester) async {
+    await mediaQueryBoilerplate(tester, false);
+
+    final Size amSize = tester.getSize(find.ancestor(
+      of: find.text('AM'),
+      matching: find.byType(InkWell),
+    ));
+    expect(amSize.width, greaterThanOrEqualTo(48.0));
+    expect(amSize.height, greaterThanOrEqualTo(48.0));
+
+    final Size pmSize = tester.getSize(find.ancestor(
+      of: find.text('PM'),
+      matching: find.byType(InkWell),
+    ));
+    expect(pmSize.width, greaterThanOrEqualTo(48.0));
+    expect(pmSize.height, greaterThanOrEqualTo(48.0));
+
+    final Size hourSize = tester.getSize(find.ancestor(
+      of: find.text('7'),
+      matching: find.byType(InkWell),
+    ));
+    expect(hourSize.width, greaterThanOrEqualTo(48.0));
+    expect(hourSize.height, greaterThanOrEqualTo(48.0));
+
+    final Size minuteSize = tester.getSize(find.ancestor(
+      of: find.text('00'),
+      matching: find.byType(InkWell),
+    ));
+    expect(minuteSize.width, greaterThanOrEqualTo(48.0));
+    expect(minuteSize.height, greaterThanOrEqualTo(48.0));
+  });
+
   testWidgets('builder parameter', (WidgetTester tester) async {
     Widget buildFrame(TextDirection textDirection) {
       return MaterialApp(
@@ -589,6 +626,120 @@ void _tests() {
     // button and the right edge of the 800 wide window.
     expect(tester.getBottomLeft(find.text('OK')).dx, 800 - ltrOkRight);
   });
+
+  testWidgets('uses root navigator by default', (WidgetTester tester) async {
+    final PickerObserver rootObserver = PickerObserver();
+    final PickerObserver nestedObserver = PickerObserver();
+
+    await tester.pumpWidget(MaterialApp(
+      navigatorObservers: <NavigatorObserver>[rootObserver],
+      home: Navigator(
+        observers: <NavigatorObserver>[nestedObserver],
+        onGenerateRoute: (RouteSettings settings) {
+          return MaterialPageRoute<dynamic>(
+            builder: (BuildContext context) {
+              return RaisedButton(
+                onPressed: () {
+                  showTimePicker(
+                    context: context,
+                    initialTime: const TimeOfDay(hour: 7, minute: 0),
+                  );
+                },
+                child: const Text('Show Picker'),
+              );
+            },
+          );
+        },
+      ),
+    ));
+
+    // Open the dialog.
+    await tester.tap(find.byType(RaisedButton));
+
+    expect(rootObserver.pickerCount, 1);
+    expect(nestedObserver.pickerCount, 0);
+  });
+
+  testWidgets('uses nested navigator if useRootNavigator is false', (WidgetTester tester) async {
+    final PickerObserver rootObserver = PickerObserver();
+    final PickerObserver nestedObserver = PickerObserver();
+
+    await tester.pumpWidget(MaterialApp(
+      navigatorObservers: <NavigatorObserver>[rootObserver],
+      home: Navigator(
+        observers: <NavigatorObserver>[nestedObserver],
+        onGenerateRoute: (RouteSettings settings) {
+          return MaterialPageRoute<dynamic>(
+            builder: (BuildContext context) {
+              return RaisedButton(
+                onPressed: () {
+                  showTimePicker(
+                    context: context,
+                    useRootNavigator: false,
+                    initialTime: const TimeOfDay(hour: 7, minute: 0),
+                  );
+                },
+                child: const Text('Show Picker'),
+              );
+            },
+          );
+        },
+      ),
+    ));
+
+    // Open the dialog.
+    await tester.tap(find.byType(RaisedButton));
+
+    expect(rootObserver.pickerCount, 0);
+    expect(nestedObserver.pickerCount, 1);
+  });
+
+  testWidgets('text scale affects certain elements and not others',
+      (WidgetTester tester) async {
+    await mediaQueryBoilerplate(
+        tester,
+        false,
+        textScaleFactor: 1.0,
+        initialTime: const TimeOfDay(hour: 7, minute: 41),
+    );
+    await tester.tap(find.text('X'));
+    await tester.pumpAndSettle();
+
+    final double minutesDisplayHeight = tester.getSize(find.text('41')).height;
+    final double amHeight = tester.getSize(find.text('AM')).height;
+
+    await tester.tap(find.text('OK')); // dismiss the dialog
+    await tester.pumpAndSettle();
+
+    // Verify that the time display is not affected by text scale.
+    await mediaQueryBoilerplate(
+        tester,
+        false,
+        textScaleFactor: 2.0,
+        initialTime: const TimeOfDay(hour: 7, minute: 41),
+    );
+    await tester.tap(find.text('X'));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(find.text('41')).height, equals(minutesDisplayHeight));
+    expect(tester.getSize(find.text('AM')).height, equals(amHeight * 2));
+
+    await tester.tap(find.text('OK')); // dismiss the dialog
+    await tester.pumpAndSettle();
+
+    // Verify that text scale for AM/PM is at most 2x.
+    await mediaQueryBoilerplate(
+        tester,
+        false,
+        textScaleFactor: 3.0,
+        initialTime: const TimeOfDay(hour: 7, minute: 41),
+    );
+    await tester.tap(find.text('X'));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(find.text('41')).height, equals(minutesDisplayHeight));
+    expect(tester.getSize(find.text('AM')).height, equals(amHeight * 2));
+  });
 }
 
 final Finder findDialPaint = find.descendant(
@@ -627,14 +778,14 @@ class _CustomPainterSemanticsTester {
         return recordedInvocation.invocation.memberName == #drawParagraph;
       })
       .map<ui.Paragraph>((RecordedInvocation recordedInvocation) {
-        return recordedInvocation.invocation.positionalArguments.first;
+        return recordedInvocation.invocation.positionalArguments.first as ui.Paragraph;
       })
       .toList();
 
     final PaintPattern expectedLabels = paints;
     int i = 0;
 
-    for (_SemanticsNodeExpectation expectation in expectedNodes) {
+    for (final _SemanticsNodeExpectation expectation in expectedNodes) {
       expect(semantics, includesNodeWith(value: expectation.label));
       final Iterable<SemanticsNode> dialLabelNodes = semantics
           .nodesWith(value: expectation.label)
@@ -660,5 +811,17 @@ class _CustomPainterSemanticsTester {
       );
     }
     expect(tester.renderObject(findDialPaint), expectedLabels);
+  }
+}
+
+class PickerObserver extends NavigatorObserver {
+  int pickerCount = 0;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic> previousRoute) {
+    if (route.toString().contains('_DialogRoute')) {
+      pickerCount++;
+    }
+    super.didPush(route, previousRoute);
   }
 }

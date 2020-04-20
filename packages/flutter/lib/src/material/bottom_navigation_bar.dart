@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -62,7 +62,7 @@ enum BottomNavigationBarType {
 ///    case it's assumed that each item will have a different background color
 ///    and that background color will contrast well with white.
 ///
-/// {@tool snippet --template=stateful_widget_material}
+/// {@tool dartpad --template=stateful_widget_material}
 /// This example shows a [BottomNavigationBar] as it is used within a [Scaffold]
 /// widget. The [BottomNavigationBar] has three [BottomNavigationBarItem]
 /// widgets and the [currentIndex] is set to index 0. The selected item is
@@ -197,7 +197,7 @@ class BottomNavigationBar extends StatefulWidget {
        assert(elevation != null && elevation >= 0.0),
        assert(iconSize != null && iconSize >= 0.0),
        assert(
-         selectedItemColor != null ? fixedColor == null : true,
+         selectedItemColor == null || fixedColor == null,
          'Either selectedItemColor or fixedColor can be specified, but not both'
        ),
        assert(selectedFontSize != null && selectedFontSize >= 0.0),
@@ -322,8 +322,8 @@ class BottomNavigationBar extends StatefulWidget {
   // [BottomNavigationBarType.fixed] is used for 3 or fewer items, and
   // [BottomNavigationBarType.shifting] is used for 4+ items.
   static BottomNavigationBarType _type(
-      BottomNavigationBarType type,
-      List<BottomNavigationBarItem> items,
+    BottomNavigationBarType type,
+    List<BottomNavigationBarItem> items,
   ) {
     if (type != null) {
       return type;
@@ -473,7 +473,6 @@ class _BottomNavigationTile extends StatelessWidget {
       flex: size,
       child: Semantics(
         container: true,
-        header: true,
         selected: selected,
         child: Stack(
           children: <Widget>[
@@ -671,9 +670,9 @@ class _BottomNavigationBarState extends State<BottomNavigationBar> with TickerPr
   static final Animatable<double> _flexTween = Tween<double>(begin: 1.0, end: 1.5);
 
   void _resetState() {
-    for (AnimationController controller in _controllers)
+    for (final AnimationController controller in _controllers)
       controller.dispose();
-    for (_Circle circle in _circles)
+    for (final _Circle circle in _circles)
       circle.dispose();
     _circles.clear();
 
@@ -709,9 +708,9 @@ class _BottomNavigationBarState extends State<BottomNavigationBar> with TickerPr
 
   @override
   void dispose() {
-    for (AnimationController controller in _controllers)
+    for (final AnimationController controller in _controllers)
       controller.dispose();
-    for (_Circle circle in _circles)
+    for (final _Circle circle in _circles)
       circle.dispose();
     super.dispose();
   }
@@ -776,7 +775,7 @@ class _BottomNavigationBarState extends State<BottomNavigationBar> with TickerPr
   // If the given [TextStyle] has a non-null `fontSize`, it should be used.
   // Otherwise, the [selectedFontSize] parameter should be used.
   static TextStyle _effectiveTextStyle(TextStyle textStyle, double fontSize) {
-    textStyle ??= const TextStyle(inherit: false);
+    textStyle ??= const TextStyle();
     // Prefer the font size on textStyle if present.
     return textStyle.fontSize == null ? textStyle.copyWith(fontSize: fontSize) : textStyle;
   }
@@ -985,7 +984,7 @@ class _RadialPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (_Circle circle in circles) {
+    for (final _Circle circle in circles) {
       final Paint paint = Paint()..color = circle.color;
       final Rect rect = Rect.fromLTWH(0.0, 0.0, size.width, size.height);
       canvas.clipRect(rect);

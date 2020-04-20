@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -41,7 +41,7 @@ class ValueClipper<T> extends CustomClipper<T> {
 }
 
 class _UpdateCountedClipRect extends ClipRect {
-  _UpdateCountedClipRect({Clip clipBehavior = Clip.antiAlias})
+  const _UpdateCountedClipRect({Clip clipBehavior = Clip.antiAlias})
     : super(clipBehavior: clipBehavior);
 }
 
@@ -51,26 +51,51 @@ class _UpdateCountedClipRRect extends ClipRRect {
 }
 
 class _UpdateCountedClipOval extends ClipOval {
-  _UpdateCountedClipOval({Clip clipBehavior = Clip.antiAlias})
+  const _UpdateCountedClipOval({Clip clipBehavior = Clip.antiAlias})
       : super(clipBehavior: clipBehavior);
 }
 
 class _UpdateCountedClipPath extends ClipPath {
-  _UpdateCountedClipPath({Clip clipBehavior = Clip.antiAlias})
+  const _UpdateCountedClipPath({Clip clipBehavior = Clip.antiAlias})
       : super(clipBehavior: clipBehavior);
 }
 
 void main() {
+  testWidgets('ClipRect with a FittedBox child sized to zero works with semantics', (WidgetTester tester) async {
+    await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: ClipRect(
+          child: FittedBox(
+            child: SizedBox.fromSize(
+              size: Size.zero,
+              child: Semantics(
+                image: true,
+                label: 'Image',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.byType(FittedBox), findsOneWidget);
+  });
+
   testWidgets('ClipRect updates clipBehavior in updateRenderObject', (WidgetTester tester) async {
-    await tester.pumpWidget(_UpdateCountedClipRect());
+    await tester.pumpWidget(const _UpdateCountedClipRect());
 
     final RenderClipRect renderClip = tester.allRenderObjects.whereType<RenderClipRect>().first;
 
     expect(renderClip.clipBehavior, equals(Clip.antiAlias));
 
-    await tester.pumpWidget(_UpdateCountedClipRect(clipBehavior: Clip.hardEdge));
+    await tester.pumpWidget(const _UpdateCountedClipRect(clipBehavior: Clip.hardEdge));
 
     expect(renderClip.clipBehavior, equals(Clip.hardEdge));
+  });
+
+  test('ClipRRect constructs with the right default values', () {
+    const ClipRRect clipRRect = ClipRRect();
+    expect(clipRRect.clipBehavior, equals(Clip.antiAlias));
+    expect(clipRRect.borderRadius, equals(BorderRadius.zero));
   });
 
   testWidgets('ClipRRect updates clipBehavior in updateRenderObject', (WidgetTester tester) async {
@@ -86,25 +111,25 @@ void main() {
   });
 
   testWidgets('ClipOval updates clipBehavior in updateRenderObject', (WidgetTester tester) async {
-    await tester.pumpWidget(_UpdateCountedClipOval());
+    await tester.pumpWidget(const _UpdateCountedClipOval());
 
     final RenderClipOval renderClip = tester.allRenderObjects.whereType<RenderClipOval>().first;
 
     expect(renderClip.clipBehavior, equals(Clip.antiAlias));
 
-    await tester.pumpWidget(_UpdateCountedClipOval(clipBehavior: Clip.hardEdge));
+    await tester.pumpWidget(const _UpdateCountedClipOval(clipBehavior: Clip.hardEdge));
 
     expect(renderClip.clipBehavior, equals(Clip.hardEdge));
   });
 
   testWidgets('ClipPath updates clipBehavior in updateRenderObject', (WidgetTester tester) async {
-    await tester.pumpWidget(_UpdateCountedClipPath());
+    await tester.pumpWidget(const _UpdateCountedClipPath());
 
     final RenderClipPath renderClip = tester.allRenderObjects.whereType<RenderClipPath>().first;
 
     expect(renderClip.clipBehavior, equals(Clip.antiAlias));
 
-    await tester.pumpWidget(_UpdateCountedClipPath(clipBehavior: Clip.hardEdge));
+    await tester.pumpWidget(const _UpdateCountedClipPath(clipBehavior: Clip.hardEdge));
 
     expect(renderClip.clipBehavior, equals(Clip.hardEdge));
   });
@@ -117,7 +142,7 @@ void main() {
           behavior: HitTestBehavior.opaque,
           onTap: () { log.add('tap'); },
         ),
-      )
+      ),
     );
     expect(log, equals(<String>['getClip']));
 
@@ -137,7 +162,7 @@ void main() {
           behavior: HitTestBehavior.opaque,
           onTap: () { log.add('tap'); },
         ),
-      )
+      ),
     );
     expect(log, equals(<String>[]));
 
@@ -160,7 +185,7 @@ void main() {
             onTap: () { log.add('tap'); },
           ),
         ),
-      )
+      ),
     );
     expect(log, equals(<String>[]));
 
@@ -188,7 +213,7 @@ void main() {
             ),
           ),
         ),
-      )
+      ),
     );
     expect(log, equals(<String>['a']));
 
@@ -212,7 +237,7 @@ void main() {
             ),
           ),
         ),
-      )
+      ),
     );
     expect(log, equals(<String>['a', 'tap']));
 
@@ -230,7 +255,7 @@ void main() {
             ),
           ),
         ),
-      )
+      ),
     );
     expect(log, equals(<String>['a', 'tap', 'a']));
 
@@ -248,7 +273,7 @@ void main() {
             ),
           ),
         ),
-      )
+      ),
     );
     expect(log, equals(<String>['a', 'tap', 'a']));
 
@@ -266,7 +291,7 @@ void main() {
             ),
           ),
         ),
-      )
+      ),
     );
     expect(log, equals(<String>['a', 'tap', 'a', 'b']));
 
@@ -284,7 +309,7 @@ void main() {
             ),
           ),
         ),
-      )
+      ),
     );
     expect(log, equals(<String>['a', 'tap', 'a', 'b', 'c']));
 
@@ -356,7 +381,7 @@ void main() {
     );
     await expectLater(
       find.byType(RepaintBoundary).first,
-      matchesGoldenFile('clip.ClipRect.1.png'),
+      matchesGoldenFile('clip.ClipRect.png'),
     );
   });
 
@@ -396,7 +421,7 @@ void main() {
     );
     await expectLater(
       find.byType(RepaintBoundary).first,
-      matchesGoldenFile('clip.ClipRectOverlay.1.png'),
+      matchesGoldenFile('clip.ClipRectOverlay.png'),
     );
   });
 
@@ -445,7 +470,7 @@ void main() {
     );
     await expectLater(
       find.byType(RepaintBoundary).first,
-      matchesGoldenFile('clip.ClipRRect.1.png'),
+      matchesGoldenFile('clip.ClipRRect.png'),
     );
   });
 
@@ -488,7 +513,7 @@ void main() {
     );
     await expectLater(
       find.byType(RepaintBoundary).first,
-      matchesGoldenFile('clip.ClipOval.1.png'),
+      matchesGoldenFile('clip.ClipOval.png'),
     );
   });
 
@@ -536,7 +561,7 @@ void main() {
     );
     await expectLater(
       find.byType(RepaintBoundary).first,
-      matchesGoldenFile('clip.ClipPath.1.png'),
+      matchesGoldenFile('clip.ClipPath.png'),
     );
   });
 
@@ -581,7 +606,7 @@ void main() {
     await tester.pumpWidget(genPhysicalModel(Clip.antiAlias));
     await expectLater(
       find.byType(RepaintBoundary).first,
-      matchesGoldenFile('clip.PhysicalModel.antiAlias.1.png'),
+      matchesGoldenFile('clip.PhysicalModel.antiAlias.png'),
     );
   });
 
@@ -589,7 +614,7 @@ void main() {
     await tester.pumpWidget(genPhysicalModel(Clip.hardEdge));
     await expectLater(
       find.byType(RepaintBoundary).first,
-      matchesGoldenFile('clip.PhysicalModel.hardEdge.1.png'),
+      matchesGoldenFile('clip.PhysicalModel.hardEdge.png'),
     );
   });
 
@@ -641,7 +666,7 @@ void main() {
     );
     await expectLater(
       find.byType(RepaintBoundary).first,
-      matchesGoldenFile('clip.PhysicalModel.default.1.png'),
+      matchesGoldenFile('clip.PhysicalModel.default.png'),
     );
   });
 
@@ -690,7 +715,7 @@ void main() {
     await tester.pumpWidget(genPhysicalShape(Clip.antiAlias));
     await expectLater(
       find.byType(RepaintBoundary).first,
-      matchesGoldenFile('clip.PhysicalShape.antiAlias.1.png'),
+      matchesGoldenFile('clip.PhysicalShape.antiAlias.png'),
     );
   });
 
@@ -698,7 +723,7 @@ void main() {
     await tester.pumpWidget(genPhysicalShape(Clip.hardEdge));
     await expectLater(
       find.byType(RepaintBoundary).first,
-      matchesGoldenFile('clip.PhysicalShape.hardEdge.1.png'),
+      matchesGoldenFile('clip.PhysicalShape.hardEdge.png'),
     );
   });
 
@@ -752,7 +777,7 @@ void main() {
     );
     await expectLater(
       find.byType(RepaintBoundary).first,
-      matchesGoldenFile('clip.PhysicalShape.default.1.png'),
+      matchesGoldenFile('clip.PhysicalShape.default.png'),
     );
   });
 

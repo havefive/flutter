@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -62,7 +62,7 @@ abstract class WidgetController {
   /// * Use [widgetList] if you expect to match several widgets and want all of them.
   T widget<T extends Widget>(Finder finder) {
     TestAsyncUtils.guardSync();
-    return finder.evaluate().single.widget;
+    return finder.evaluate().single.widget as T;
   }
 
   /// The first matching widget according to a depth-first pre-order
@@ -73,7 +73,7 @@ abstract class WidgetController {
   /// * Use [widget] if you only expect to match one widget.
   T firstWidget<T extends Widget>(Finder finder) {
     TestAsyncUtils.guardSync();
-    return finder.evaluate().first.widget;
+    return finder.evaluate().first.widget as T;
   }
 
   /// The matching widgets in the widget tree.
@@ -83,7 +83,7 @@ abstract class WidgetController {
   Iterable<T> widgetList<T extends Widget>(Finder finder) {
     TestAsyncUtils.guardSync();
     return finder.evaluate().map<T>((Element element) {
-      final T result = element.widget;
+      final T result = element.widget as T;
       return result;
     });
   }
@@ -107,7 +107,7 @@ abstract class WidgetController {
   /// * Use [elementList] if you expect to match several elements and want all of them.
   T element<T extends Element>(Finder finder) {
     TestAsyncUtils.guardSync();
-    return finder.evaluate().single;
+    return finder.evaluate().single as T;
   }
 
   /// The first matching element according to a depth-first pre-order
@@ -118,7 +118,7 @@ abstract class WidgetController {
   /// * Use [element] if you only expect to match one element.
   T firstElement<T extends Element>(Finder finder) {
     TestAsyncUtils.guardSync();
-    return finder.evaluate().first;
+    return finder.evaluate().first as T;
   }
 
   /// The matching elements in the widget tree.
@@ -127,7 +127,7 @@ abstract class WidgetController {
   /// * Use [firstElement] if you expect to match several but only want the first.
   Iterable<T> elementList<T extends Element>(Finder finder) {
     TestAsyncUtils.guardSync();
-    return finder.evaluate();
+    return finder.evaluate().cast<T>();
   }
 
   /// All states currently in the widget tree (lazy pre-order traversal).
@@ -179,7 +179,7 @@ abstract class WidgetController {
   T _stateOf<T extends State>(Element element, Finder finder) {
     TestAsyncUtils.guardSync();
     if (element is StatefulElement)
-      return element.state;
+      return element.state as T;
     throw StateError('Widget of type ${element.widget.runtimeType}, with ${finder.description}, is not a StatefulWidget.');
   }
 
@@ -204,7 +204,7 @@ abstract class WidgetController {
   /// * Use [renderObjectList] if you expect to match several render objects and want all of them.
   T renderObject<T extends RenderObject>(Finder finder) {
     TestAsyncUtils.guardSync();
-    return finder.evaluate().single.renderObject;
+    return finder.evaluate().single.renderObject as T;
   }
 
   /// The render object of the first matching widget according to a
@@ -215,7 +215,7 @@ abstract class WidgetController {
   /// * Use [renderObject] if you only expect to match one render object.
   T firstRenderObject<T extends RenderObject>(Finder finder) {
     TestAsyncUtils.guardSync();
-    return finder.evaluate().first.renderObject;
+    return finder.evaluate().first.renderObject as T;
   }
 
   /// The render objects of the matching widgets in the widget tree.
@@ -225,13 +225,13 @@ abstract class WidgetController {
   Iterable<T> renderObjectList<T extends RenderObject>(Finder finder) {
     TestAsyncUtils.guardSync();
     return finder.evaluate().map<T>((Element element) {
-      final T result = element.renderObject;
+      final T result = element.renderObject as T;
       return result;
     });
   }
 
   /// Returns a list of all the [Layer] objects in the rendering.
-  List<Layer> get layers => _walkLayers(binding.renderView.layer).toList();
+  List<Layer> get layers => _walkLayers(binding.renderView.debugLayer).toList();
   Iterable<Layer> _walkLayers(Layer layer) sync* {
     TestAsyncUtils.guardSync();
     yield layer;
@@ -252,14 +252,14 @@ abstract class WidgetController {
   ///
   /// If the center of the widget is not exposed, this might send events to
   /// another object.
-  Future<void> tap(Finder finder, {int pointer}) {
-    return tapAt(getCenter(finder), pointer: pointer);
+  Future<void> tap(Finder finder, {int pointer, int buttons = kPrimaryButton}) {
+    return tapAt(getCenter(finder), pointer: pointer, buttons: buttons);
   }
 
   /// Dispatch a pointer down / pointer up sequence at the given location.
-  Future<void> tapAt(Offset location, {int pointer}) {
+  Future<void> tapAt(Offset location, {int pointer, int buttons = kPrimaryButton}) {
     return TestAsyncUtils.guard<void>(() async {
-      final TestGesture gesture = await startGesture(location, pointer: pointer);
+      final TestGesture gesture = await startGesture(location, pointer: pointer, buttons: buttons);
       await gesture.up();
     });
   }
@@ -269,9 +269,9 @@ abstract class WidgetController {
   ///
   /// If the center of the widget is not exposed, this might send events to
   /// another object.
-  Future<TestGesture> press(Finder finder, {int pointer}) {
+  Future<TestGesture> press(Finder finder, {int pointer, int buttons = kPrimaryButton}) {
     return TestAsyncUtils.guard<TestGesture>(() {
-      return startGesture(getCenter(finder), pointer: pointer);
+      return startGesture(getCenter(finder), pointer: pointer, buttons: buttons);
     });
   }
 
@@ -281,15 +281,15 @@ abstract class WidgetController {
   ///
   /// If the center of the widget is not exposed, this might send events to
   /// another object.
-  Future<void> longPress(Finder finder, {int pointer}) {
-    return longPressAt(getCenter(finder), pointer: pointer);
+  Future<void> longPress(Finder finder, {int pointer, int buttons = kPrimaryButton}) {
+    return longPressAt(getCenter(finder), pointer: pointer, buttons: buttons);
   }
 
   /// Dispatch a pointer down / pointer up sequence at the given location with
   /// a delay of [kLongPressTimeout] + [kPressTimeout] between the two events.
-  Future<void> longPressAt(Offset location, {int pointer}) {
+  Future<void> longPressAt(Offset location, {int pointer, int buttons = kPrimaryButton}) {
     return TestAsyncUtils.guard<void>(() async {
-      final TestGesture gesture = await startGesture(location, pointer: pointer);
+      final TestGesture gesture = await startGesture(location, pointer: pointer, buttons: buttons);
       await pump(kLongPressTimeout + kPressTimeout);
       await gesture.up();
     });
@@ -320,6 +320,7 @@ abstract class WidgetController {
     Offset offset,
     double speed, {
     int pointer,
+    int buttons = kPrimaryButton,
     Duration frameInterval = const Duration(milliseconds: 16),
     Offset initialOffset = Offset.zero,
     Duration initialOffsetDelay = const Duration(seconds: 1),
@@ -329,6 +330,7 @@ abstract class WidgetController {
       offset,
       speed,
       pointer: pointer,
+      buttons: buttons,
       frameInterval: frameInterval,
       initialOffset: initialOffset,
       initialOffsetDelay: initialOffsetDelay,
@@ -365,6 +367,7 @@ abstract class WidgetController {
     Offset offset,
     double speed, {
     int pointer,
+    int buttons = kPrimaryButton,
     Duration frameInterval = const Duration(milliseconds: 16),
     Offset initialOffset = Offset.zero,
     Duration initialOffsetDelay = const Duration(seconds: 1),
@@ -372,7 +375,7 @@ abstract class WidgetController {
     assert(offset.distance > 0.0);
     assert(speed > 0.0); // speed is pixels/second
     return TestAsyncUtils.guard<void>(() async {
-      final TestPointer testPointer = TestPointer(pointer ?? _getNextPointer());
+      final TestPointer testPointer = TestPointer(pointer ?? _getNextPointer(), PointerDeviceKind.touch, null, buttons);
       final HitTestResult result = hitTestOnBinding(startLocation);
       const int kMoveCount = 50; // Needs to be >= kHistorySize, see _LeastSquaresVelocityTrackerStrategy
       final double timeStampDelta = 1000.0 * offset.distance / (kMoveCount * speed);
@@ -433,10 +436,24 @@ abstract class WidgetController {
   /// To force this function to a send a single move event, the 'touchSlopX' and
   /// 'touchSlopY' variables should be set to 0. However, generally, these values
   /// should be left to their default values.
-  /// {@end template}
-  Future<void> drag(Finder finder, Offset offset, { int pointer, double touchSlopX = kDragSlopDefault, double touchSlopY = kDragSlopDefault }) {
+  /// {@endtemplate}
+  Future<void> drag(
+    Finder finder,
+    Offset offset, {
+    int pointer,
+    int buttons = kPrimaryButton,
+    double touchSlopX = kDragSlopDefault,
+    double touchSlopY = kDragSlopDefault,
+  }) {
     assert(kDragSlopDefault > kTouchSlop);
-    return dragFrom(getCenter(finder), offset, pointer: pointer, touchSlopX: touchSlopX, touchSlopY: touchSlopY);
+    return dragFrom(
+      getCenter(finder),
+      offset,
+      pointer: pointer,
+      buttons: buttons,
+      touchSlopX: touchSlopX,
+      touchSlopY: touchSlopY,
+    );
   }
 
   /// Attempts a drag gesture consisting of a pointer down, a move by
@@ -447,10 +464,17 @@ abstract class WidgetController {
   /// instead.
   ///
   /// {@macro flutter.flutter_test.drag}
-  Future<void> dragFrom(Offset startLocation, Offset offset, { int pointer, double touchSlopX = kDragSlopDefault, double touchSlopY = kDragSlopDefault }) {
+  Future<void> dragFrom(
+    Offset startLocation,
+    Offset offset, {
+    int pointer,
+    int buttons = kPrimaryButton,
+    double touchSlopX = kDragSlopDefault,
+    double touchSlopY = kDragSlopDefault,
+  }) {
     assert(kDragSlopDefault > kTouchSlop);
     return TestAsyncUtils.guard<void>(() async {
-      final TestGesture gesture = await startGesture(startLocation, pointer: pointer);
+      final TestGesture gesture = await startGesture(startLocation, pointer: pointer, buttons: buttons);
       assert(gesture != null);
 
       final double xSign = offset.dx.sign;
@@ -538,14 +562,18 @@ abstract class WidgetController {
   ///
   /// You can use [startGesture] instead if your gesture begins with a down
   /// event.
-  Future<TestGesture> createGesture({int pointer, PointerDeviceKind kind = PointerDeviceKind.touch}) async {
-    final TestGesture gesture = TestGesture(
+  Future<TestGesture> createGesture({
+    int pointer,
+    PointerDeviceKind kind = PointerDeviceKind.touch,
+    int buttons = kPrimaryButton,
+  }) async {
+    return TestGesture(
       hitTester: hitTestOnBinding,
       dispatcher: sendEventToBinding,
       kind: kind,
       pointer: pointer ?? _getNextPointer(),
+      buttons: buttons,
     );
-    return gesture;
   }
 
   /// Creates a gesture with an initial down gesture at a particular point, and
@@ -558,8 +586,13 @@ abstract class WidgetController {
     Offset downLocation, {
     int pointer,
     PointerDeviceKind kind = PointerDeviceKind.touch,
+    int buttons = kPrimaryButton,
   }) async {
-    final TestGesture result = await createGesture(pointer: pointer, kind: kind);
+    final TestGesture result = await createGesture(
+      pointer: pointer,
+      kind: kind,
+      buttons: buttons,
+    );
     await result.down(downLocation);
     return result;
   }
@@ -611,7 +644,7 @@ abstract class WidgetController {
   Offset _getElementPoint(Finder finder, Offset sizeToPoint(Size size)) {
     TestAsyncUtils.guardSync();
     final Element element = finder.evaluate().single;
-    final RenderBox box = element.renderObject;
+    final RenderBox box = element.renderObject as RenderBox;
     assert(box != null);
     return box.localToGlobal(sizeToPoint(box.size));
   }
@@ -621,7 +654,7 @@ abstract class WidgetController {
   Size getSize(Finder finder) {
     TestAsyncUtils.guardSync();
     final Element element = finder.evaluate().single;
-    final RenderBox box = element.renderObject;
+    final RenderBox box = element.renderObject as RenderBox;
     assert(box != null);
     return box.size;
   }
